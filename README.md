@@ -62,6 +62,8 @@ npx skills add .
 
 ### Validation
 
+Lint and run requires dh cli private tool that is not yet available.
+
 ```bash
 cd tools
 uv sync
