@@ -19,6 +19,7 @@ import httpx
 KAGGLE_API = "https://www.kaggle.com/api/v1"
 EVALS_DATA_DIR = Path(__file__).resolve().parent / "evals" / "data"
 MAX_SIZE_BYTES = 3 * 1024 * 1024  # 3 MB
+MAX_CSV_FILES = 3
 TARGET_COUNT = 10
 PAGE_SIZE = 20
 
@@ -242,36 +243,67 @@ def refresh_manifests(client: httpx.Client):
     print("\nDone")
 
 
+def clean_dataset_dirs():
+    """Remove all files except CSVs and manifest.json from dataset directories."""
+    if not EVALS_DATA_DIR.exists():
+        return
+    removed = 0
+    for d in EVALS_DATA_DIR.iterdir():
+        if not d.is_dir():
+            continue
+        for f in d.iterdir():
+            if f.is_dir():
+                shutil.rmtree(f)
+                removed += 1
+            elif f.suffix != ".csv" and f.name != "manifest.json":
+                f.unlink()
+                removed += 1
+    if removed:
+        print(f"Cleaned {removed} non-data files from dataset directories\n")
+
+
 def main():
-    if "--refresh-manifests" in sys.argv:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Download top Kaggle CSV datasets for evals")
+    parser.add_argument("-n", "--count", type=int, default=TARGET_COUNT,
+                        help=f"Number of datasets to download (default: {TARGET_COUNT})")
+    parser.add_argument("--refresh-manifests", action="store_true",
+                        help="Regenerate manifest.json for existing datasets")
+    args = parser.parse_args()
+
+    if args.refresh_manifests:
         with httpx.Client() as client:
             refresh_manifests(client)
         return
 
+    target_count = args.count
+
     EVALS_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    clean_dataset_dirs()
 
     existing = {d.name for d in EVALS_DATA_DIR.iterdir() if d.is_dir()}
     collected = len(existing)
 
-    if collected >= TARGET_COUNT:
+    if collected >= target_count:
         print(f"Already have {collected} datasets, nothing to do")
         return
 
-    print(f"Target: {TARGET_COUNT} most-voted CSV datasets (< 3MB) from Kaggle")
-    print(f"Have {collected}, need {TARGET_COUNT - collected} more...\n")
+    print(f"Target: {target_count} most-voted CSV datasets (< 3MB) from Kaggle")
+    print(f"Have {collected}, need {target_count - collected} more...\n")
 
     page = 1
     max_pages = 50
 
     with httpx.Client() as client:
-        while collected < TARGET_COUNT and page <= max_pages:
+        while collected < target_count and page <= max_pages:
             datasets = list_datasets(client, page)
             if not datasets:
                 print(f"No more datasets at page {page}")
                 break
 
             for ds in datasets:
-                if collected >= TARGET_COUNT:
+                if collected >= target_count:
                     break
 
                 ref = ds.get("ref", "")
@@ -286,7 +318,7 @@ def main():
 
                 dest = EVALS_DATA_DIR / folder_name
                 print(
-                    f"  [{collected + 1}/{TARGET_COUNT}] "
+                    f"  [{collected + 1}/{target_count}] "
                     f"{ref} ({votes} votes, {size // 1024}KB) ... ",
                     end="",
                     flush=True,
@@ -294,12 +326,13 @@ def main():
 
                 csv_filenames = download_and_extract(client, ref, dest)
 
-                if csv_filenames:
+                if csv_filenames and len(csv_filenames) <= MAX_CSV_FILES:
                     write_folder_manifest(client, dest, ds, csv_filenames)
                     print(f"OK ({len(csv_filenames)} csv)")
                     collected += 1
                 else:
-                    print("SKIP")
+                    reason = f"too many CSVs ({len(csv_filenames)})" if csv_filenames else "no CSVs"
+                    print(f"SKIP ({reason})")
                     shutil.rmtree(dest, ignore_errors=True)
 
                 time.sleep(0.5)
