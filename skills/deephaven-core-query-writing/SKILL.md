@@ -23,6 +23,7 @@ metadata:
 | Iceberg | `references/iceberg.md` | reads/writes Iceberg tables |
 | UI | `references/ui.md` | creates dashboards, components, or uses hooks |
 | Plotting | `references/plotting.md` | creates charts or visualizations with dx |
+| CSV | `references/csv.md` | imports/exports CSV files, fixes column types, parses dates from CSVs |
 | Sitemap | `references/sitemap.md` | needs to look up additional documentation URLs |
 
 If you read Aggregations you must also read update-by, as they often go hand-in-hand.
@@ -66,10 +67,9 @@ from deephaven.column import double_col, string_col
 t = empty_table(100).update(["X = i", "Y = X * 2"])
 
 # New table from columns
-t = new_table([
-    string_col("Sym", ["AAPL", "GOOG"]),
-    double_col("Price", [150.0, 140.0])
-])
+t = new_table(
+    [string_col("Sym", ["AAPL", "GOOG"]), double_col("Price", [150.0, 140.0])]
+)
 
 # Ticking time table (real-time)
 t = time_table("PT1s")  # ticks every second
@@ -98,7 +98,7 @@ from deephaven import empty_table
 table = empty_table(1).update(["ColName = 42.5"])
 
 # Get a scalar from a 1-row result table
-value = table.j_table.getColumnSource('ColName').get(
+value = table.j_table.getColumnSource("ColName").get(
     table.j_table.getRowSet().firstRowKey()
 )
 print(f"Result: {value:,.2f}")
@@ -138,17 +138,22 @@ import datetime
 from deephaven import new_table
 from deephaven.column import datetime_col, double_col, string_col
 
-t = new_table([
-    string_col("Sym", ["AAPL", "GOOG", "MSFT", "AMZN"]),
-    double_col("Price", [150.0, 140.0, 200.0, 50.0]),
-    string_col("Description", ["no error", "has error", "fine", "ok"]),
-    datetime_col("Timestamp", [
-        datetime.datetime(2024, 6, 1, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 2, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 3, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 4, tzinfo=datetime.timezone.utc),
-    ]),
-])
+t = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG", "MSFT", "AMZN"]),
+        double_col("Price", [150.0, 140.0, 200.0, 50.0]),
+        string_col("Description", ["no error", "has error", "fine", "ok"]),
+        datetime_col(
+            "Timestamp",
+            [
+                datetime.datetime(2024, 6, 1, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 2, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 3, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 4, tzinfo=datetime.timezone.utc),
+            ],
+        ),
+    ]
+)
 
 filter_table = new_table([string_col("Sym", ["AAPL", "GOOG"])])
 
@@ -191,17 +196,19 @@ t.where("Timestamp > parseInstant(`2024-01-01T00:00:00 America/New_York`)")
 from deephaven import new_table
 from deephaven.column import double_col, int_col, string_col
 
-t = new_table([
-    string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
-    double_col("Price", [150.0, 152.0, 140.0, 142.0]),
-    int_col("Qty", [100, 200, 150, 250]),
-])
+t = new_table(
+    [
+        string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
+        double_col("Price", [150.0, 152.0, 140.0, 142.0]),
+        int_col("Qty", [100, 200, 150, 250]),
+    ]
+)
 
-t.sum_by("Sym")           # Sum all numeric columns
-t.avg_by("Sym")           # Average
-t.count_by("Count", "Sym") # Count rows
-t.first_by("Sym")         # First row per group
-t.last_by("Sym")          # Last row per group
+t.sum_by("Sym")  # Sum all numeric columns
+t.avg_by("Sym")  # Average
+t.count_by("Count", "Sym")  # Count rows
+t.first_by("Sym")  # First row per group
+t.last_by("Sym")  # Last row per group
 ```
 
 **Combined (multiple operations):**
@@ -209,17 +216,22 @@ t.last_by("Sym")          # Last row per group
 from deephaven import agg, new_table
 from deephaven.column import double_col, int_col, string_col
 
-t = new_table([
-    string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
-    double_col("Price", [150.0, 152.0, 140.0, 142.0]),
-    int_col("Qty", [100, 200, 150, 250]),
-])
+t = new_table(
+    [
+        string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
+        double_col("Price", [150.0, 152.0, 140.0, 142.0]),
+        int_col("Qty", [100, 200, 150, 250]),
+    ]
+)
 
-t.agg_by([
-    agg.avg(cols=["AvgPrice = Price"]),
-    agg.sum_(cols=["TotalQty = Qty"]),
-    agg.count_(col="Count"),
-], by=["Sym"])
+t.agg_by(
+    [
+        agg.avg(cols=["AvgPrice = Price"]),
+        agg.sum_(cols=["TotalQty = Qty"]),
+        agg.count_(col="Count"),
+    ],
+    by=["Sym"],
+)
 ```
 
 ### Query String Syntax
@@ -282,4 +294,5 @@ t_parquet = read("/tmp/output.parquet")
 | `references/iceberg.md` | Catalog types, reading/writing tables, partitioned writes |
 | `references/ui.md` | Dashboard structure, hooks, components, ui.table, styling |
 | `references/plotting.md` | Deephaven Express (dx), all plot types, subplots, interactivity |
+| `references/csv.md` | CSV import/export, column types, renaming, date parsing, messy files |
 | `references/sitemap.md` | Full documentation URL lookup |
