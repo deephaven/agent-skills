@@ -446,7 +446,6 @@ write_csv(cleaned, "/tmp/cleaned_prices.csv")
 |---------|-----|
 | Using `pd.read_csv` / pandas for import | Use `deephaven.read_csv` — keeps data in-engine |
 | Not specifying types, then getting wrong inference | Use the `header` parameter with `dht` types |
-| Printing a table to see CSV contents | Tables display automatically — never `print(table)` |
 | Parsing dates in Python instead of query strings | Use `parseInstant()`, `parseLong()`, etc. in `.update()` |
 | Using `trim=True` when you need `ignore_surrounding_spaces=True` | `trim` is for quoted values; `ignore_surrounding_spaces` (default True) is for unquoted |
 | Converting to pandas just to export | Use `write_csv` directly |
