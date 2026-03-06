@@ -51,6 +51,13 @@ tools/dist/
 # Eval data (downloaded datasets)
 tools/evals/
 
+# Local agent/tool config
+.agents/
+.claude/
+tools/.claude/
+plans/
+skills-lock.json
+
 # OS
 .DS_Store
 Thumbs.db
