@@ -127,7 +127,7 @@ def collect_blocks(md_files: list[Path]) -> list[Block]:
 
 
 def lint_block(block: Block, ruff_path: str, *, fix: bool = False) -> Block:
-    """Lint a single block with ruff. Mutates and returns block."""
+    """Lint and format-check a single block with ruff. Mutates and returns block."""
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".py", prefix="ruff_block_", delete=False
     ) as f:
@@ -135,8 +135,9 @@ def lint_block(block: Block, ruff_path: str, *, fix: bool = False) -> Block:
         tmp_path = Path(f.name)
 
     try:
+        # --- ruff check (lint) ---
         ignore = ",".join(IGNORED_RULES)
-        cmd = [
+        check_cmd = [
             ruff_path,
             "check",
             "--isolated",
@@ -146,22 +147,42 @@ def lint_block(block: Block, ruff_path: str, *, fix: bool = False) -> Block:
             ignore,
         ]
         if fix:
-            cmd.append("--fix")
-        cmd.append(str(tmp_path))
+            check_cmd.append("--fix")
+        check_cmd.append(str(tmp_path))
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        check_result = subprocess.run(check_cmd, capture_output=True, text=True)
 
         # If --fix was used, always read back (ruff may fix some issues
         # while others remain, so returncode can still be non-zero)
         if fix:
             block.code = tmp_path.read_text()
 
-        output = result.stdout.strip()
-        # Replace temp path with meaningful location in output
-        if output:
-            output = output.replace(str(tmp_path), f"{block.file}:{block.line_num}")
-        block.output = output
-        block.passed = result.returncode == 0
+        # --- ruff format ---
+        if fix:
+            fmt_cmd = [ruff_path, "format", "--isolated", str(tmp_path)]
+            subprocess.run(fmt_cmd, capture_output=True, text=True)
+            block.code = tmp_path.read_text()
+            fmt_ok = True
+        else:
+            fmt_cmd = [ruff_path, "format", "--isolated", "--check", str(tmp_path)]
+            fmt_result = subprocess.run(fmt_cmd, capture_output=True, text=True)
+            fmt_ok = fmt_result.returncode == 0
+
+        # --- combine results ---
+        outputs = []
+        check_output = check_result.stdout.strip()
+        if check_output:
+            check_output = check_output.replace(
+                str(tmp_path), f"{block.file}:{block.line_num}"
+            )
+            outputs.append(check_output)
+        if not fmt_ok:
+            outputs.append(
+                f"{block.file}:{block.line_num}: code block is not formatted "
+                f"(run with --fix to auto-format)"
+            )
+        block.output = "\n".join(outputs)
+        block.passed = check_result.returncode == 0 and fmt_ok
 
     finally:
         tmp_path.unlink(missing_ok=True)
