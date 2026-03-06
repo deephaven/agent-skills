@@ -38,6 +38,7 @@ def my_component():
         direction="column",
     )
 
+
 result = my_component()
 ```
 
@@ -55,6 +56,7 @@ from deephaven import ui
 def bad(show):
     if show:
         value, set_value = ui.use_state(0)  # Will break!
+
 
 # CORRECT - hook at top level
 @ui.component
@@ -131,8 +133,9 @@ def layout():
     value, set_value = ui.use_state("")
     return ui.row(
         ui.panel(ui.text_field(value=value, on_change=set_value)),  # Input panel
-        ui.panel(ui.text(f"You typed: {value}")),                   # Display panel
+        ui.panel(ui.text(f"You typed: {value}")),  # Display panel
     )
+
 
 result = layout()
 
@@ -141,7 +144,7 @@ ui.panel(
     ui.heading("Controls"),
     ui.button("Action 1", on_press=lambda: None),
     ui.button("Action 2", on_press=lambda: None),
-    direction="column"  # Panel accepts flex props directly
+    direction="column",  # Panel accepts flex props directly
 )
 ```
 
@@ -153,8 +156,8 @@ Use `height` on rows and `width` on columns/stacks as proportional values:
 from deephaven import ui
 
 ui.column(
-    ui.row(ui.panel("Top"), height=25),      # 25% height
-    ui.row(ui.panel("Bottom"), height=75),   # 75% height
+    ui.row(ui.panel("Top"), height=25),  # 25% height
+    ui.row(ui.panel("Bottom"), height=75),  # 75% height
 )
 ```
 
@@ -176,6 +179,7 @@ def layout():
         ui.panel(ui.text_field(value=message, on_change=set_message, width="100%")),
         ui.panel(message),
     )
+
 
 dash_simple_state = ui.dashboard(layout())
 ```
@@ -219,19 +223,20 @@ def button_examples():
     return ui.flex(
         # button - important primary action
         ui.button("Submit", variant="accent", on_press=lambda: None),
-
         # action_button - secondary action, can be quiet or icon-only
         ui.action_button("Filter", on_press=lambda: None, is_quiet=True),
         ui.action_button(ui.icon("account"), aria_label="Edit", on_press=lambda: None),
-
         # toggle_button - tracks selected state
         ui.toggle_button(
-            "Pin", is_selected=selected,
-            on_change=set_selected, is_emphasized=True,
+            "Pin",
+            is_selected=selected,
+            on_change=set_selected,
+            is_emphasized=True,
         ),
         direction="row",
         gap="size-100",
     )
+
 
 result = button_examples()
 ```
@@ -249,8 +254,10 @@ result = button_examples()
 from deephaven import ui
 
 ui.flex(
-    ui.text("A"), ui.text("B"), ui.text("C"),
-    direction="row",      # "row" (default), "column", "row-reverse", "column-reverse"
+    ui.text("A"),
+    ui.text("B"),
+    ui.text("C"),
+    direction="row",  # "row" (default), "column", "row-reverse", "column-reverse"
     # Allow wrapping: True, False, "wrap", "nowrap", "wrap-reverse"
     wrap=True,
 )
@@ -268,7 +275,8 @@ ui.flex(
 from deephaven import ui
 
 ui.flex(
-    ui.text("A"), ui.text("B"),
+    ui.text("A"),
+    ui.text("B"),
     direction="row",
     # Values: "start", "end", "center", "space-between",
     #         "space-around", "space-evenly"
@@ -284,10 +292,11 @@ ui.flex(
 from deephaven import ui
 
 ui.flex(
-    ui.text("A"), ui.text("B"),
-    gap="size-200",        # Space between all items (default: "size-100")
-    column_gap="size-100", # Horizontal gap only
-    row_gap="size-200",    # Vertical gap only
+    ui.text("A"),
+    ui.text("B"),
+    gap="size-200",  # Space between all items (default: "size-100")
+    column_gap="size-100",  # Horizontal gap only
+    row_gap="size-200",  # Vertical gap only
 )
 ```
 
@@ -345,12 +354,13 @@ Most components share these properties for layout, sizing, and styling.
 ```python
 from deephaven import ui
 
-ui.text("Hello",
-    flex=1,              # Flex grow factor
-    flex_grow=1,         # How much to grow
-    flex_shrink=0,       # How much to shrink
-    align_self="center", # Cross-axis alignment
-    order=1,             # Display order
+ui.text(
+    "Hello",
+    flex=1,  # Flex grow factor
+    flex_grow=1,  # How much to grow
+    flex_shrink=0,  # How much to shrink
+    align_self="center",  # Cross-axis alignment
+    order=1,  # Display order
 )
 ```
 
@@ -359,7 +369,7 @@ ui.text("Hello",
 from deephaven import ui
 
 ui.view(
-    width="100%",        # Or "size-1000", 200, etc.
+    width="100%",  # Or "size-1000", 200, etc.
     height="auto",
     min_width=100,
     max_width="100%",
@@ -374,16 +384,16 @@ from deephaven import ui
 
 # Margin works on most components (flex, view, etc.)
 ui.flex(
-    margin="size-100",        # All sides
-    margin_x="size-200",      # Left and right
-    margin_y="size-100",      # Top and bottom
-    margin_top="size-50",     # Individual sides
+    margin="size-100",  # All sides
+    margin_x="size-200",  # Left and right
+    margin_y="size-100",  # Top and bottom
+    margin_top="size-50",  # Individual sides
 )
 
 # Padding works on ui.view (not ui.flex)
 ui.view(
-    padding="size-100",       # All sides
-    padding_start="size-200", # Logical (respects RTL)
+    padding="size-100",  # All sides
+    padding_start="size-200",  # Logical (respects RTL)
 )
 ```
 
@@ -435,10 +445,10 @@ ui.flex(
 from deephaven import ui
 
 ui.view(
-    border_width="thin",           # Or "thick", pixel value
-    border_radius="medium",        # Or "small", "large"
+    border_width="thin",  # Or "thick", pixel value
+    border_radius="medium",  # Or "small", "large"
     border_top_width="thick",
-    border_top_start_radius="large",   # Logical (respects RTL)
+    border_top_start_radius="large",  # Logical (respects RTL)
 )
 ```
 
@@ -448,7 +458,8 @@ from deephaven import ui
 
 ui.view(
     position="absolute",  # Or "relative", "fixed", "sticky"
-    top=0, left=0,
+    top=0,
+    left=0,
     z_index=100,
 )
 ```
@@ -457,7 +468,8 @@ ui.view(
 ```python
 from deephaven import ui
 
-ui.button("Click",
+ui.button(
+    "Click",
     id="my-button",
     is_hidden=False,
     is_disabled=False,
@@ -484,9 +496,7 @@ ui.table(my_table)
 # With options
 ui.table(
     my_table,
-    show_search=True,
-    show_quick_filters=True,
-    reverse=True,               # Reverse row order for ticking tables is useful
+    reverse=True,  # Reverse row order for ticking tables is useful
 )
 ```
 
@@ -495,20 +505,22 @@ ui.table(
 from deephaven import new_table, ui
 from deephaven.column import double_col, int_col, string_col
 
-my_table = new_table([
-    string_col("Symbol", ["AAPL", "GOOG"]),
-    string_col("Name", ["Apple", "Google"]),
-    double_col("Price", [150.0, 140.0]),
-    string_col("Notes", ["note1", "note2"]),
-    int_col("InternalId", [1, 2]),
-])
+my_table = new_table(
+    [
+        string_col("Symbol", ["AAPL", "GOOG"]),
+        string_col("Name", ["Apple", "Google"]),
+        double_col("Price", [150.0, 140.0]),
+        string_col("Notes", ["note1", "note2"]),
+        int_col("InternalId", [1, 2]),
+    ]
+)
 
 ui.table(
     my_table,
-    front_columns=["Symbol", "Name"],     # Pin to front
-    back_columns=["Notes"],               # Pin to back
-    frozen_columns=["Symbol"],            # Freeze during scroll
-    hidden_columns=["InternalId"],        # Hidden by default
+    front_columns=["Symbol", "Name"],  # Pin to front
+    back_columns=["Notes"],  # Pin to back
+    frozen_columns=["Symbol"],  # Freeze during scroll
+    hidden_columns=["InternalId"],  # Hidden by default
     column_display_names={"Symbol": "Sym", "Price": "Current Price"},
 )
 ```
@@ -518,11 +530,13 @@ ui.table(
 from deephaven import new_table, ui
 from deephaven.column import double_col, string_col
 
-my_table = new_table([
-    string_col("Sym", ["AAPL", "GOOG", "MSFT"]),
-    double_col("Price", [150.0, 40.0, 200.0]),
-    string_col("Status", ["Active", "Inactive", "Active"]),
-])
+my_table = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG", "MSFT"]),
+        double_col("Price", [150.0, 40.0, 200.0]),
+        string_col("Status", ["Active", "Inactive", "Active"]),
+    ]
+)
 
 ui.table(
     my_table,
@@ -534,7 +548,7 @@ ui.table(
         ui.TableFormat(if_="Price < 50", background_color="negative"),
         # Column-specific color
         ui.TableFormat(cols="Status", color="accent"),
-    ]
+    ],
 )
 ```
 
@@ -543,11 +557,13 @@ ui.table(
 from deephaven import new_table, ui
 from deephaven.column import double_col, string_col
 
-my_table = new_table([
-    string_col("Sym", ["AAPL", "GOOG", "MSFT"]),
-    double_col("Price", [150.0, 140.0, 200.0]),
-    string_col("Exchange", ["NYSE", "NASDAQ", "NYSE"]),
-])
+my_table = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG", "MSFT"]),
+        double_col("Price", [150.0, 140.0, 200.0]),
+        string_col("Exchange", ["NYSE", "NASDAQ", "NYSE"]),
+    ]
+)
 
 ui.table(
     my_table,
@@ -556,7 +572,7 @@ ui.table(
         "Sym": "AAPL",
         "Price": ">=100",
         "Exchange": "NYSE",
-    }
+    },
 )
 ```
 
@@ -565,10 +581,13 @@ ui.table(
 from deephaven import new_table, ui
 from deephaven.column import double_col, string_col
 
-my_table = new_table([
-    string_col("Sym", ["AAPL", "GOOG"]),
-    double_col("Price", [150.0, 140.0]),
-])
+my_table = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG"]),
+        double_col("Price", [150.0, 140.0]),
+    ]
+)
+
 
 @ui.component
 def interactive_table(t):
@@ -581,6 +600,7 @@ def interactive_table(t):
         always_fetch_columns=["Sym", "Price"],  # Ensure these are in callbacks
     )
 
+
 result = interactive_table(my_table)
 ```
 
@@ -589,10 +609,12 @@ result = interactive_table(my_table)
 from deephaven import new_table, ui
 from deephaven.column import double_col, string_col
 
-my_table = new_table([
-    string_col("Sym", ["AAPL", "GOOG"]),
-    double_col("Price", [150.0, 140.0]),
-])
+my_table = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG"]),
+        double_col("Price", [150.0, 140.0]),
+    ]
+)
 
 ui.table(
     my_table,
@@ -611,12 +633,14 @@ ui.table(
 from deephaven import new_table, ui
 from deephaven.column import double_col, int_col, string_col
 
-my_table = new_table([
-    string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
-    double_col("Price", [150.0, 152.0, 140.0]),
-    int_col("Quantity", [100, 200, 150]),
-    double_col("Total", [15000.0, 30400.0, 21000.0]),
-])
+my_table = new_table(
+    [
+        string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
+        double_col("Price", [150.0, 152.0, 140.0]),
+        int_col("Quantity", [100, 200, 150]),
+        double_col("Total", [15000.0, 30400.0, 21000.0]),
+    ]
+)
 
 ui.table(
     my_table,
@@ -645,21 +669,18 @@ def table_component():
 
     return ui.flex(
         ui.button("Reset", on_press=lambda: set_iteration(iteration + 1)),
-        ui.table(table)
+        ui.table(table),
     )
+
 
 # Option 2: use_liveness_scope (for external tables)
 @ui.component
 def table_component_v2():
     table, set_table = ui.use_state(lambda: time_table("PT1s"))
-    handle_reset = ui.use_liveness_scope(
-        lambda _: set_table(time_table("PT1s")), []
-    )
+    handle_reset = ui.use_liveness_scope(lambda _: set_table(time_table("PT1s")), [])
 
-    return ui.flex(
-        ui.button("Reset", on_press=handle_reset),
-        ui.table(table)
-    )
+    return ui.flex(ui.button("Reset", on_press=handle_reset), ui.table(table))
+
 
 result = table_component()
 ```

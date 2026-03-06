@@ -107,7 +107,7 @@ value_spec = kc.json_spec(
         "px": "Price",
         "qty": "Qty",
         "ts": "Timestamp",
-    }
+    },
 )
 ```
 

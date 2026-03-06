@@ -100,9 +100,9 @@ dx.scatter(
     table,
     x="SepalLength",
     y="SepalWidth",
-    color="Species",      # Color by column
-    symbol="Species",     # Different markers
-    size="PetalLength",   # Bubble size
+    color="Species",  # Color by column
+    symbol="Species",  # Different markers
+    size="PetalLength",  # Bubble size
 )
 ```
 
@@ -111,15 +111,18 @@ dx.scatter(
 from deephaven import empty_table
 from deephaven.plot import express as dx
 
-table = empty_table(100).update([
-    "Timestamp = parseInstant(`2024-01-01T09:30:00 UTC`) + i * 'PT1m'",
-    "Price = 150.0 + Math.sin(i * 0.1) * 10",
-    "Volume = (int)(1000 + i * 50)",
-])
+table = empty_table(100).update(
+    [
+        "Timestamp = parseInstant(`2024-01-01T09:30:00 UTC`) + i * 'PT1m'",
+        "Price = 150.0 + Math.sin(i * 0.1) * 10",
+        "Volume = (int)(1000 + i * 50)",
+    ]
+)
 
 dx.line(
     table,
-    x="Timestamp", y=["Price", "Volume"],
+    x="Timestamp",
+    y=["Price", "Volume"],
     yaxis_sequence=[1, 2],  # Different Y axes
 )
 ```
@@ -132,7 +135,8 @@ table = dx.data.stocks()
 
 dx.line(
     table,
-    x="Timestamp", y="Price",
+    x="Timestamp",
+    y="Price",
     title="Stock Prices",
     xaxis_titles="Time",
     yaxis_titles="Price ($)",
@@ -148,18 +152,28 @@ from deephaven import new_table
 from deephaven.column import datetime_col, double_col
 from deephaven.plot import express as dx
 
-table = new_table([
-    datetime_col("Timestamp", [
-        datetime.datetime(
-            2024, 6, 1, 10, i,
-            tzinfo=datetime.timezone.utc,
-        ) for i in range(5)
-    ]),
-    double_col("Open", [150.0, 152.0, 148.0, 155.0, 153.0]),
-    double_col("High", [155.0, 156.0, 152.0, 158.0, 157.0]),
-    double_col("Low", [148.0, 150.0, 146.0, 153.0, 151.0]),
-    double_col("Close", [152.0, 148.0, 151.0, 153.0, 156.0]),
-])
+table = new_table(
+    [
+        datetime_col(
+            "Timestamp",
+            [
+                datetime.datetime(
+                    2024,
+                    6,
+                    1,
+                    10,
+                    i,
+                    tzinfo=datetime.timezone.utc,
+                )
+                for i in range(5)
+            ],
+        ),
+        double_col("Open", [150.0, 152.0, 148.0, 155.0, 153.0]),
+        double_col("High", [155.0, 156.0, 152.0, 158.0, 157.0]),
+        double_col("Low", [148.0, 150.0, 146.0, 153.0, 151.0]),
+        double_col("Close", [152.0, 148.0, 151.0, 153.0, 156.0]),
+    ]
+)
 
 dx.candlestick(
     table,
@@ -190,12 +204,14 @@ from deephaven import empty_table
 from deephaven.plot import express as dx
 
 # Docs: https://deephaven.io/core/plotly/docs/sub-plots.md
-table = empty_table(100).update([
-    "X = i",
-    "Y = Math.sin(i * 0.1) * 10",
-    "Category = i % 3 == 0 ? `A` : i % 3 == 1 ? `B` : `C`",
-    "Value = randomDouble(0, 100)",
-])
+table = empty_table(100).update(
+    [
+        "X = i",
+        "Y = Math.sin(i * 0.1) * 10",
+        "Category = i % 3 == 0 ? `A` : i % 3 == 1 ? `B` : `C`",
+        "Value = randomDouble(0, 100)",
+    ]
+)
 
 plot1 = dx.line(table, x="X", y="Y")
 plot2 = dx.scatter(table, x="X", y="Y")
@@ -203,8 +219,12 @@ plot3 = dx.bar(table, x="Category", y="Value")
 plot4 = dx.histogram(table, x="Value")
 
 combined = dx.make_subplots(
-    plot1, plot2, plot3, plot4,
-    rows=2, cols=2,
+    plot1,
+    plot2,
+    plot3,
+    plot4,
+    rows=2,
+    cols=2,
     shared_xaxes="columns",
 )
 ```
@@ -218,24 +238,38 @@ from deephaven.column import datetime_col, double_col
 from deephaven.plot import express as dx
 
 # Docs: https://deephaven.io/core/plotly/docs/layer-plots.md
-table = new_table([
-    datetime_col("Timestamp", [
-        datetime.datetime(
-            2024, 6, 1, 10, i,
-            tzinfo=datetime.timezone.utc,
-        ) for i in range(5)
-    ]),
-    double_col("Open", [150.0, 152.0, 148.0, 155.0, 153.0]),
-    double_col("High", [155.0, 156.0, 152.0, 158.0, 157.0]),
-    double_col("Low", [148.0, 150.0, 146.0, 153.0, 151.0]),
-    double_col("Close", [152.0, 148.0, 151.0, 153.0, 156.0]),
-    double_col("MovingAvg", [151.0, 150.5, 150.0, 151.5, 152.0]),
-])
+table = new_table(
+    [
+        datetime_col(
+            "Timestamp",
+            [
+                datetime.datetime(
+                    2024,
+                    6,
+                    1,
+                    10,
+                    i,
+                    tzinfo=datetime.timezone.utc,
+                )
+                for i in range(5)
+            ],
+        ),
+        double_col("Open", [150.0, 152.0, 148.0, 155.0, 153.0]),
+        double_col("High", [155.0, 156.0, 152.0, 158.0, 157.0]),
+        double_col("Low", [148.0, 150.0, 146.0, 153.0, 151.0]),
+        double_col("Close", [152.0, 148.0, 151.0, 153.0, 156.0]),
+        double_col("MovingAvg", [151.0, 150.5, 150.0, 151.5, 152.0]),
+    ]
+)
 
 layered = dx.layer(
     dx.candlestick(
-        table, x="Timestamp", open="Open",
-        high="High", low="Low", close="Close",
+        table,
+        x="Timestamp",
+        open="Open",
+        high="High",
+        low="Low",
+        close="Close",
     ),
     dx.line(table, x="Timestamp", y="MovingAvg"),
 )
@@ -255,20 +289,17 @@ def filtered_plot(table, initial_sym):
     sym, set_sym = ui.use_state(initial_sym)
 
     # Memoize filtered table
-    filtered = ui.use_memo(
-        lambda: table.where(f"Sym = `{sym.upper()}`"), [table, sym]
-    )
+    filtered = ui.use_memo(lambda: table.where(f"Sym = `{sym.upper()}`"), [table, sym])
 
     # Memoize plot creation
-    plot = ui.use_memo(
-        lambda: dx.line(filtered, x="Timestamp", y="Price"), [filtered]
-    )
+    plot = ui.use_memo(lambda: dx.line(filtered, x="Timestamp", y="Price"), [filtered])
 
     return ui.flex(
         ui.text_field(value=sym, on_change=set_sym, label="Symbol"),
         plot,
-        direction="column"
+        direction="column",
     )
+
 
 stocks = dx.data.stocks()
 result = filtered_plot(stocks, "AAPL")
@@ -295,6 +326,7 @@ def partitioned_plot(table, initial_sym):
     )
 
     return [ui.text_field(value=sym, on_change=set_sym), plot]
+
 
 stocks = dx.data.stocks()
 result = partitioned_plot(stocks, "AAPL")
@@ -323,13 +355,16 @@ def dynamic_plot(table):
 
     return ui.flex(
         ui.picker(
-            "Line", "Scatter", "Area",
+            "Line",
+            "Scatter",
+            "Area",
             selected_key=plot_type,
             on_change=set_plot_type,
         ),
         plot,
-        direction="column"
+        direction="column",
     )
+
 
 stocks = dx.data.stocks().where("Sym = `AAPL`")
 result = dynamic_plot(stocks)
@@ -343,11 +378,13 @@ from deephaven import empty_table
 from deephaven.plot import express as dx
 
 # Docs: https://deephaven.io/core/plotly/docs/multiple-axes.md
-table = empty_table(100).update([
-    "Timestamp = parseInstant(`2024-01-01T09:30:00 UTC`) + i * 'PT1m'",
-    "Price = 150.0 + Math.sin(i * 0.1) * 10",
-    "Volume = (int)(1000 + i * 50)",
-])
+table = empty_table(100).update(
+    [
+        "Timestamp = parseInstant(`2024-01-01T09:30:00 UTC`) + i * 'PT1m'",
+        "Price = 150.0 + Math.sin(i * 0.1) * 10",
+        "Volume = (int)(1000 + i * 50)",
+    ]
+)
 
 dx.line(
     table,
@@ -367,10 +404,13 @@ Use `unsafe_update_figure` to access the underlying Plotly Figure for advanced c
 from deephaven import empty_table
 from deephaven.plot import express as dx
 
-table = empty_table(50).update([
-    "X = i",
-    "Y = Math.sin(i * 0.1) * 10",
-])
+table = empty_table(50).update(
+    [
+        "X = i",
+        "Y = Math.sin(i * 0.1) * 10",
+    ]
+)
+
 
 def customize(figure):
     # Modify traces
@@ -387,6 +427,7 @@ def customize(figure):
     )
     return figure
 
+
 plot = dx.scatter(table, x="X", y="Y", unsafe_update_figure=customize)
 ```
 
@@ -398,13 +439,17 @@ from deephaven import new_table
 from deephaven.column import double_col, string_col
 from deephaven.plot import express as dx
 
-table = new_table([
-    string_col("Category", ["A", "B", "C"]),
-    double_col("Value", [10.0, 20.0, 30.0]),
-])
+table = new_table(
+    [
+        string_col("Category", ["A", "B", "C"]),
+        double_col("Value", [10.0, 20.0, 30.0]),
+    ]
+)
+
 
 def update(fig):
     fig.update_traces(marker_line_width=3, marker_line_color="gray")
+
 
 dx.bar(table, x="Category", y="Value", unsafe_update_figure=update)
 ```
@@ -414,18 +459,20 @@ dx.bar(table, x="Category", y="Value", unsafe_update_figure=update)
 from deephaven import empty_table
 from deephaven.plot import express as dx
 
-table = empty_table(30).update([
-    "X = i",
-    "Y = Math.sin(i * 0.1) * 10",
-    "Category = i % 3 == 0 ? `A` : i % 3 == 1 ? `B` : `C`",
-])
+table = empty_table(30).update(
+    [
+        "X = i",
+        "Y = Math.sin(i * 0.1) * 10",
+        "Category = i % 3 == 0 ? `A` : i % 3 == 1 ? `B` : `C`",
+    ]
+)
+
 
 def update(fig):
-    fig.update_layout(legend=dict(
-        orientation="h",
-        yanchor="bottom", y=-0.2,
-        xanchor="center", x=0.5
-    ))
+    fig.update_layout(
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+    )
+
 
 dx.line(table, x="X", y="Y", by="Category", unsafe_update_figure=update)
 ```
@@ -450,12 +497,14 @@ import deephaven.plot.express as dx
 from deephaven import time_table
 
 # Create real-time data
-source = time_table("PT1s").update([
-    "X = i",
-    "Y1 = Math.sin(i * 0.1) * 10",
-    "Y2 = Math.cos(i * 0.1) * 10",
-    "Category = i % 3 == 0 ? `A` : i % 3 == 1 ? `B` : `C`"
-])
+source = time_table("PT1s").update(
+    [
+        "X = i",
+        "Y1 = Math.sin(i * 0.1) * 10",
+        "Y2 = Math.cos(i * 0.1) * 10",
+        "Category = i % 3 == 0 ? `A` : i % 3 == 1 ? `B` : `C`",
+    ]
+)
 
 # Line plot with multiple series
 line_plot = dx.line(
@@ -474,16 +523,15 @@ scatter_plot = dx.scatter(
     title="Phase Plot by Category",
 )
 
+
 # Customize with unsafe_update_figure
 def add_grid(fig):
     fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor="lightgray")
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgray")
     return fig
 
-styled_plot = dx.scatter(
-    source, x="Y1", y="Y2",
-    unsafe_update_figure=add_grid
-)
+
+styled_plot = dx.scatter(source, x="Y1", y="Y2", unsafe_update_figure=add_grid)
 ```
 
 ## Further Reading

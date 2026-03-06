@@ -19,45 +19,57 @@ Adds columns from right table. Unmatched rows get NULL. Most common join type.
 from deephaven import new_table
 from deephaven.column import double_col, int_col, string_col
 
-left = new_table([
-    string_col("KeyCol", ["A", "B", "C"]),
-    double_col("LeftVal", [1.0, 2.0, 3.0]),
-])
+left = new_table(
+    [
+        string_col("KeyCol", ["A", "B", "C"]),
+        double_col("LeftVal", [1.0, 2.0, 3.0]),
+    ]
+)
 
-right = new_table([
-    string_col("KeyCol", ["A", "B", "D"]),
-    double_col("Col1", [10.0, 20.0, 40.0]),
-    double_col("Col2", [100.0, 200.0, 400.0]),
-])
+right = new_table(
+    [
+        string_col("KeyCol", ["A", "B", "D"]),
+        double_col("Col1", [10.0, 20.0, 40.0]),
+        double_col("Col2", [100.0, 200.0, 400.0]),
+    ]
+)
 
 result = left.natural_join(
     table=right,
-    on="KeyCol",                    # or ["Key1", "Key2"]
-    joins="Col1, Col2",             # columns to add (default: all)
+    on="KeyCol",  # or ["Key1", "Key2"]
+    joins="Col1, Col2",  # columns to add (default: all)
 )
 
 # Match different column names
-left2 = new_table([
-    string_col("LeftKey", ["A", "B"]),
-    double_col("Val", [1.0, 2.0]),
-])
-right2 = new_table([
-    string_col("RightKey", ["A", "B"]),
-    double_col("Info", [10.0, 20.0]),
-])
+left2 = new_table(
+    [
+        string_col("LeftKey", ["A", "B"]),
+        double_col("Val", [1.0, 2.0]),
+    ]
+)
+right2 = new_table(
+    [
+        string_col("RightKey", ["A", "B"]),
+        double_col("Info", [10.0, 20.0]),
+    ]
+)
 left2.natural_join(right2, on="LeftKey = RightKey")
 
 # Multiple keys
-left3 = new_table([
-    string_col("Sym", ["AAPL", "GOOG"]),
-    string_col("Date", ["2024-01-01", "2024-01-01"]),
-    double_col("Price", [150.0, 140.0]),
-])
-right3 = new_table([
-    string_col("Sym", ["AAPL", "GOOG"]),
-    string_col("Date", ["2024-01-01", "2024-01-01"]),
-    int_col("Volume", [1000, 2000]),
-])
+left3 = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG"]),
+        string_col("Date", ["2024-01-01", "2024-01-01"]),
+        double_col("Price", [150.0, 140.0]),
+    ]
+)
+right3 = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG"]),
+        string_col("Date", ["2024-01-01", "2024-01-01"]),
+        int_col("Volume", [1000, 2000]),
+    ]
+)
 left3.natural_join(right3, on=["Sym", "Date"])
 
 # Rename while joining
@@ -70,15 +82,19 @@ from deephaven import new_table
 from deephaven.column import double_col, string_col
 from deephaven.table import NaturalJoinType
 
-left = new_table([
-    string_col("Key", ["A", "B"]),
-    double_col("Val", [1.0, 2.0]),
-])
+left = new_table(
+    [
+        string_col("Key", ["A", "B"]),
+        double_col("Val", [1.0, 2.0]),
+    ]
+)
 
-right = new_table([
-    string_col("Key", ["A", "A", "B"]),
-    double_col("Info", [10.0, 11.0, 20.0]),
-])
+right = new_table(
+    [
+        string_col("Key", ["A", "A", "B"]),
+        double_col("Info", [10.0, 11.0, 20.0]),
+    ]
+)
 
 # Use first match
 left.natural_join(right, on="Key", type=NaturalJoinType.FIRST_MATCH)
@@ -95,22 +111,22 @@ Like natural_join but errors if not exactly one match per left row.
 from deephaven import new_table
 from deephaven.column import double_col, string_col
 
-left = new_table([
-    string_col("Key", ["A", "B"]),
-    double_col("Val", [1.0, 2.0]),
-])
-
-right_table = new_table([
-    string_col("Key", ["A", "B"]),
-    double_col("Col1", [10.0, 20.0]),
-    double_col("Col2", [100.0, 200.0]),
-])
-
-result = left.exact_join(
-    table=right_table,
-    on="Key",
-    joins="Col1, Col2"
+left = new_table(
+    [
+        string_col("Key", ["A", "B"]),
+        double_col("Val", [1.0, 2.0]),
+    ]
 )
+
+right_table = new_table(
+    [
+        string_col("Key", ["A", "B"]),
+        double_col("Col1", [10.0, 20.0]),
+        double_col("Col2", [100.0, 200.0]),
+    ]
+)
+
+result = left.exact_join(table=right_table, on="Key", joins="Col1, Col2")
 ```
 
 Use when you require one-to-one matching and want to catch data issues.
@@ -123,15 +139,19 @@ Returns all matching combinations. With no keys, produces Cartesian product.
 from deephaven import new_table
 from deephaven.column import double_col, string_col
 
-left = new_table([
-    string_col("Key", ["A", "A", "B"]),
-    double_col("LVal", [1.0, 2.0, 3.0]),
-])
+left = new_table(
+    [
+        string_col("Key", ["A", "A", "B"]),
+        double_col("LVal", [1.0, 2.0, 3.0]),
+    ]
+)
 
-right = new_table([
-    string_col("Key", ["A", "B", "B"]),
-    double_col("RVal", [10.0, 20.0, 30.0]),
-])
+right = new_table(
+    [
+        string_col("Key", ["A", "B", "B"]),
+        double_col("RVal", [10.0, 20.0, 30.0]),
+    ]
+)
 
 # All matching rows from both tables
 result = left.join(right, on="Key")
@@ -152,26 +172,36 @@ import datetime
 from deephaven import new_table
 from deephaven.column import datetime_col, double_col, string_col
 
-trades = new_table([
-    string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
-    datetime_col("Timestamp", [
-        datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 3, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
-    ]),
-    double_col("TradePrice", [150.0, 152.0, 140.0]),
-])
+trades = new_table(
+    [
+        string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
+        datetime_col(
+            "Timestamp",
+            [
+                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 3, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
+            ],
+        ),
+        double_col("TradePrice", [150.0, 152.0, 140.0]),
+    ]
+)
 
-quotes = new_table([
-    string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
-    datetime_col("Timestamp", [
-        datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-    ]),
-    double_col("Bid", [149.0, 151.0, 139.0]),
-    double_col("Ask", [150.5, 152.5, 140.5]),
-])
+quotes = new_table(
+    [
+        string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
+        datetime_col(
+            "Timestamp",
+            [
+                datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
+            ],
+        ),
+        double_col("Bid", [149.0, 151.0, 139.0]),
+        double_col("Ask", [150.5, 152.5, 140.5]),
+    ]
+)
 
 # Basic time-series join
 trades.aj(quotes, on=["Sym", "Timestamp"])
@@ -191,24 +221,34 @@ import datetime
 from deephaven import new_table
 from deephaven.column import datetime_col, double_col, string_col
 
-trades = new_table([
-    string_col("Ticker", ["AAPL", "GOOG"]),
-    datetime_col("TradeTime", [
-        datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
-    ]),
-    double_col("Price", [150.0, 140.0]),
-])
+trades = new_table(
+    [
+        string_col("Ticker", ["AAPL", "GOOG"]),
+        datetime_col(
+            "TradeTime",
+            [
+                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
+            ],
+        ),
+        double_col("Price", [150.0, 140.0]),
+    ]
+)
 
-quotes = new_table([
-    string_col("Ticker", ["AAPL", "GOOG"]),
-    datetime_col("QuoteTime", [
-        datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-    ]),
-    double_col("Bid", [149.0, 139.0]),
-    double_col("Ask", [150.5, 140.5]),
-])
+quotes = new_table(
+    [
+        string_col("Ticker", ["AAPL", "GOOG"]),
+        datetime_col(
+            "QuoteTime",
+            [
+                datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
+            ],
+        ),
+        double_col("Bid", [149.0, 139.0]),
+        double_col("Ask", [150.5, 140.5]),
+    ]
+)
 
 # Get quote at trade time
 trades.aj(quotes, on=["Ticker", "TradeTime >= QuoteTime"])
@@ -227,23 +267,33 @@ import datetime
 from deephaven import new_table
 from deephaven.column import datetime_col, double_col, string_col
 
-trades = new_table([
-    string_col("Sym", ["AAPL", "GOOG"]),
-    datetime_col("Timestamp", [
-        datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-    ]),
-    double_col("Price", [150.0, 140.0]),
-])
+trades = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG"]),
+        datetime_col(
+            "Timestamp",
+            [
+                datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
+            ],
+        ),
+        double_col("Price", [150.0, 140.0]),
+    ]
+)
 
-quotes = new_table([
-    string_col("Sym", ["AAPL", "GOOG"]),
-    datetime_col("Timestamp", [
-        datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-        datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
-    ]),
-    double_col("Bid", [149.0, 139.0]),
-])
+quotes = new_table(
+    [
+        string_col("Sym", ["AAPL", "GOOG"]),
+        datetime_col(
+            "Timestamp",
+            [
+                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
+            ],
+        ),
+        double_col("Bid", [149.0, 139.0]),
+    ]
+)
 
 # Find next quote after trade
 trades.raj(quotes, on=["Sym", "Timestamp"])
@@ -257,20 +307,24 @@ Joins rows falling within a range, then aggregates the matches.
 from deephaven import agg, new_table
 from deephaven.column import double_col, int_col
 
-left = new_table([
-    int_col("start_col", [0, 10, 20]),
-    int_col("end_col", [10, 20, 30]),
-])
+left = new_table(
+    [
+        int_col("start_col", [0, 10, 20]),
+        int_col("end_col", [10, 20, 30]),
+    ]
+)
 
-right = new_table([
-    int_col("range_col", [5, 15, 25]),
-    double_col("Value", [100.0, 200.0, 300.0]),
-])
+right = new_table(
+    [
+        int_col("range_col", [5, 15, 25]),
+        double_col("Value", [100.0, 200.0, 300.0]),
+    ]
+)
 
 result = left.range_join(
     table=right,
     on=["start_col <= range_col <= end_col"],
-    aggs=[agg.group(cols=["MatchedValues = Value"])]
+    aggs=[agg.group(cols=["MatchedValues = Value"])],
 )
 ```
 
@@ -291,18 +345,22 @@ result = left.range_join(
 from deephaven import new_table
 from deephaven.column import double_col, string_col
 
-left = new_table([
-    string_col("X", ["A", "B"]),
-    string_col("A", ["x", "y"]),
-    double_col("LVal", [1.0, 2.0]),
-])
+left = new_table(
+    [
+        string_col("X", ["A", "B"]),
+        string_col("A", ["x", "y"]),
+        double_col("LVal", [1.0, 2.0]),
+    ]
+)
 
-right = new_table([
-    string_col("X", ["A", "B"]),
-    string_col("B", ["x", "y"]),
-    double_col("Col1", [10.0, 20.0]),
-    double_col("Col2", [100.0, 200.0]),
-])
+right = new_table(
+    [
+        string_col("X", ["A", "B"]),
+        string_col("B", ["x", "y"]),
+        double_col("Col1", [10.0, 20.0]),
+        double_col("Col2", [100.0, 200.0]),
+    ]
+)
 
 # on: Match column X in both tables
 left.natural_join(right, on=["X"], joins=["Col1"])

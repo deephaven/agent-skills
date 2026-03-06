@@ -129,9 +129,7 @@ t = table_adapter.table(
 ```python
 from deephaven.experimental import iceberg
 
-instructions = iceberg.IcebergReadInstructions(
-    snapshot_id=6738371110677246500
-)
+instructions = iceberg.IcebergReadInstructions(snapshot_id=6738371110677246500)
 ```
 
 ### Column Renames
@@ -174,14 +172,13 @@ table_def = {
 
 # Map column names to Iceberg field IDs
 field_mapping = {
-    "Symbol": 1,    # Field ID 1
-    "Price": 2,     # Field ID 2
+    "Symbol": 1,  # Field ID 1
+    "Price": 2,  # Field ID 2
     "Quantity": 3,  # Field ID 3
 }
 
 resolver = iceberg.UnboundResolver(
-    table_definition=table_def,
-    column_instructions=field_mapping
+    table_definition=table_def, column_instructions=field_mapping
 )
 ```
 
