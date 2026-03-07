@@ -79,44 +79,79 @@ kill $(cat {OUTPUT_DIR}/dh-serve.pid) 2>/dev/null
 
 Analyze the dashboard script from Phase 1. Identify all `@ui.component` decorated functions, the component tree, and every interactive element.
 
-Write a Playwright TypeScript test to: {OUTPUT_DIR}/playwright-test.ts
+Write a Playwright Python test to: {OUTPUT_DIR}/playwright-test.py
 
-The test must use `@playwright/test`. Structure:
+The test must use `playwright.sync_api`. Structure:
 
-```ts
-import { test, expect, type Page } from "@playwright/test";
-import fs from "fs";
-import path from "path";
+```python
+import json
+import time
+from pathlib import Path
 
-const DASHBOARD_URL = "<the URL from 4a>";
-const OUTPUT_DIR = path.resolve("{OUTPUT_DIR}");
-const SCREENSHOTS_DIR = path.join(OUTPUT_DIR, "screenshots");
-const RESULTS_FILE = path.join(OUTPUT_DIR, "playwright-results.json");
+from playwright.sync_api import sync_playwright, expect
 
-interface ComponentTestResult {
-  component: string;
-  type: string;
-  action: string;
-  result: "pass" | "fail" | "not_found";
-  error: string;
-  screenshot: string;
-}
+DASHBOARD_URL = "<the URL from 4a>"
+OUTPUT_DIR = Path("{OUTPUT_DIR}").resolve()
+SCREENSHOTS_DIR = OUTPUT_DIR / "screenshots"
+RESULTS_FILE = OUTPUT_DIR / "playwright-results.json"
 
-interface TestResults {
-  eval_name: string;
-  dashboard_url: string;
-  initial_load: {
-    success: boolean;
-    screenshot: string;
-  };
-  component_tests: ComponentTestResult[];
-  summary: {
-    total_components: number;
-    tested: number;
-    passed: number;
-    failed: number;
-  };
-}
+
+def retry(fn, *, timeout=15_000, interval=1_000):
+    """Retry fn() until it succeeds or timeout (ms) is reached."""
+    deadline = time.monotonic() + timeout / 1000
+    last_error = None
+    while time.monotonic() < deadline:
+        try:
+            fn()
+            return
+        except Exception as e:
+            last_error = e
+            time.sleep(interval / 1000)
+    if last_error:
+        raise last_error
+
+
+def main():
+    component_tests = []
+    SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        # Navigate and wait for dashboard
+        page.goto(DASHBOARD_URL)
+        # ... wait for selectors, take screenshots, test components ...
+
+        # Write results
+        results = {
+            "eval_name": "{EVAL_NAME}",
+            "dashboard_url": DASHBOARD_URL,
+            "initial_load": {
+                "success": True,
+                "screenshot": "screenshots/initial-load.png",
+            },
+            "component_tests": component_tests,
+            "summary": {
+                "total_components": len(component_tests),
+                "tested": sum(
+                    1 for t in component_tests if t["result"] != "not_found"
+                ),
+                "passed": sum(
+                    1 for t in component_tests if t["result"] == "pass"
+                ),
+                "failed": sum(
+                    1 for t in component_tests if t["result"] == "fail"
+                ),
+            },
+        }
+        RESULTS_FILE.write_text(json.dumps(results, indent=2))
+
+        browser.close()
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 **Test flow:**
@@ -134,39 +169,47 @@ interface TestResults {
 **Do NOT capture console logs or page errors.** They are not meaningful for eval results and waste context space. Do not set up `page.on("console", ...)` or `page.on("pageerror", ...)` handlers.
 
 **Deephaven-specific patterns (from the Playwright skill):**
-- Overlays render OUTSIDE the panel — use `page.getByRole()` not `panel.getByRole()` for dialogs/dropdowns
+- Overlays render OUTSIDE the panel — use `page.get_by_role()` not `panel.get_by_role()` for dialogs/dropdowns
 - Use `click()` not `check()`/`uncheck()` for Spectrum checkboxes/switches
 - Visit every tab in every stack. Use `.lm_tab` selectors and check `.lm_active` class
-- Table-backed pickers: use retry loop (up to 15 attempts with 1s sleep)
+- Table-backed pickers: use `retry()` loop (retries with 1s interval, 15s total timeout)
 - Cold-start race: tab click handlers may not be attached on first load — retry tab clicks
 
-**Test structure** — use a single `test()` block that tests all components sequentially and writes results at the end:
+**Test structure** — use a single `main()` function that tests all components sequentially and writes results at the end:
 
-```ts
-test("dashboard eval", async ({ page }) => {
-  const componentTests: ComponentTestResult[] = [];
+```python
+def main():
+    component_tests = []
+    SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
-  fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-  // Navigate and wait for dashboard
-  await page.goto(DASHBOARD_URL);
-  // ... wait for selectors, take screenshots, test components ...
+        # Navigate and wait for dashboard
+        page.goto(DASHBOARD_URL)
+        # ... wait for selectors, take screenshots, test components ...
 
-  // Write results
-  const results: TestResults = {
-    eval_name: "{EVAL_NAME}",
-    dashboard_url: DASHBOARD_URL,
-    initial_load: { success: true, screenshot: "screenshots/initial-load.png" },
-    component_tests: componentTests,
-    summary: {
-      total_components: componentTests.length,
-      tested: componentTests.filter(t => t.result !== "not_found").length,
-      passed: componentTests.filter(t => t.result === "pass").length,
-      failed: componentTests.filter(t => t.result === "fail").length,
-    },
-  };
-  fs.writeFileSync(RESULTS_FILE, JSON.stringify(results, null, 2));
-});
+        # Write results
+        results = {
+            "eval_name": "{EVAL_NAME}",
+            "dashboard_url": DASHBOARD_URL,
+            "initial_load": {"success": True, "screenshot": "screenshots/initial-load.png"},
+            "component_tests": component_tests,
+            "summary": {
+                "total_components": len(component_tests),
+                "tested": sum(1 for t in component_tests if t["result"] != "not_found"),
+                "passed": sum(1 for t in component_tests if t["result"] == "pass"),
+                "failed": sum(1 for t in component_tests if t["result"] == "fail"),
+            },
+        }
+        RESULTS_FILE.write_text(json.dumps(results, indent=2))
+
+        browser.close()
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 **Results format** — write to `playwright-results.json`:
@@ -201,36 +244,18 @@ test("dashboard eval", async ({ page }) => {
 **Constraints:**
 - Do NOT modify the dashboard script
 - Do NOT use Deephaven APIs in the test — pure Playwright against the browser DOM
-- Use `@playwright/test` framework only
-- Create `screenshots/` directory before saving screenshots using `fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true })`
-- Wrap each component test in try/catch so one failure doesn't abort all tests
+- Use `playwright.sync_api` only
+- Create `screenshots/` directory before saving screenshots using `SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)`
+- Wrap each component test in try/except so one failure doesn't abort all tests
 - If a component can't be located, record it as `"not_found"` rather than failing
 
-### 4c. Set up Playwright and run the test
+### 4c. Run the test
 
-First, create a minimal `playwright.config.ts` in {OUTPUT_DIR}:
-
-```ts
-import { defineConfig } from "@playwright/test";
-
-export default defineConfig({
-  timeout: 120_000,
-  use: {
-    headless: true,
-  },
-});
-```
-
-Then install dependencies (if not already present):
-```
-npm init -y --prefix {OUTPUT_DIR} 2>/dev/null
-npm install --prefix {OUTPUT_DIR} @playwright/test
-npx --prefix {OUTPUT_DIR} playwright install chromium
-```
+Playwright and its browsers are pre-installed in the tools environment. No per-eval installation needed.
 
 Run the test:
 ```
-npx --prefix {OUTPUT_DIR} playwright test {OUTPUT_DIR}/playwright-test.ts --config {OUTPUT_DIR}/playwright.config.ts --reporter=list
+python {OUTPUT_DIR}/playwright-test.py
 ```
 
 If the test script itself has errors (not component failures), fix the test script and re-run up to 3 times.
@@ -253,8 +278,8 @@ If there ARE failures, iterate up to {MAX_FIX_ITERATIONS} times:
 3. Verify the fix: `dh exec --vm --no-show-tables {OUTPUT_DIR}/{SCRIPT_NAME} --timeout 120`
 4. If dh exec fails, fix and retry (up to 3 sub-attempts)
 5. Stop your server by PID: `kill $(cat {OUTPUT_DIR}/dh-serve.pid) 2>/dev/null`, then re-serve: `dh serve {OUTPUT_DIR}/{SCRIPT_NAME} --no-browser --iframe dashboard & echo $! > {OUTPUT_DIR}/dh-serve.pid`
-6. Update `DASHBOARD_URL` in `{OUTPUT_DIR}/playwright-test.ts` if the port changed
-7. Re-run: `npx --prefix {OUTPUT_DIR} playwright test {OUTPUT_DIR}/playwright-test.ts --config {OUTPUT_DIR}/playwright.config.ts --reporter=list`
+6. Update `DASHBOARD_URL` in `{OUTPUT_DIR}/playwright-test.py` if the port changed
+7. Re-run: `python {OUTPUT_DIR}/playwright-test.py`
 8. If no more actionable failures, stop the loop
 
 After the loop ends, stop your server: `kill $(cat {OUTPUT_DIR}/dh-serve.pid) 2>/dev/null`
