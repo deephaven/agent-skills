@@ -1,0 +1,346 @@
+{
+  "skill_name": "deephaven-core-query-writing",
+  "evals": [
+    {
+      "id": 1,
+      "name": "vaccination-join-timeseries",
+      "dataset": "gpreda--covid-world-vaccination-progress",
+      "prompt": "I have two CSV files about global COVID vaccination data. The country-level daily data is at evals/data/gpreda--covid-world-vaccination-progress/country_vaccinations.csv and manufacturer-level data is at evals/data/gpreda--covid-world-vaccination-progress/country_vaccinations_by_manufacturer.csv. Build a Deephaven dashboard that joins these two tables on country/location to show vaccination progress by manufacturer for each country. Include a time-series line chart of cumulative vaccinations over time, a bar chart showing manufacturer market share, and a picker to filter by country. Use deephaven.ui.dashboard for the layout.",
+      "expected_output": "A working dashboard that joins the two CSV files on country, shows time-series trends, manufacturer breakdown, and has a country picker filter.",
+      "skill_areas": ["joins", "time-series", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script reads both CSV files using deephaven.read_csv",
+        "The script uses a join operation (natural_join, join, or exact_join) to combine the two tables",
+        "The dashboard includes a line chart showing vaccination trends over time",
+        "The dashboard includes a picker or filter for country selection",
+        "The dashboard uses ui.dashboard with a multi-panel layout"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "student-course-join",
+      "dataset": "uciml--student-alcohol-consumption",
+      "prompt": "I have student performance data split across two files — math course students at evals/data/uciml--student-alcohol-consumption/student-mat.csv and Portuguese course students at evals/data/uciml--student-alcohol-consumption/student-por.csv. Both files share the same schema. Build a Deephaven dashboard that loads both tables, combines them with a join or merge operation, and shows how alcohol consumption (Dalc for weekday, Walc for weekend) correlates with final grades (G3). Include a scatter plot of alcohol vs grades, a bar chart of average grades by alcohol level, and a picker to switch between math and Portuguese students. Use deephaven.ui.dashboard.",
+      "expected_output": "A dashboard joining the two student datasets, showing alcohol-grade correlations with interactive filtering between courses.",
+      "skill_areas": ["joins", "aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script reads both CSV files",
+        "The script combines or compares the two datasets in some way",
+        "The dashboard includes a scatter or correlation chart relating alcohol and grades",
+        "The dashboard includes aggregated statistics (e.g. avg grades by alcohol level)",
+        "The dashboard has a picker or filter to select between math and Portuguese courses"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "india-covid-multi-join",
+      "dataset": "sudalairajkumar--covid19-in-india",
+      "prompt": "I have three CSVs about COVID in India: case data at evals/data/sudalairajkumar--covid19-in-india/covid_19_india.csv (columns: Date, State/UnionTerritory, Confirmed, Cured, Deaths), testing data at evals/data/sudalairajkumar--covid19-in-india/StatewiseTestingDetails.csv (columns: Date, State, TotalSamples, Negative, Positive), and vaccination data at evals/data/sudalairajkumar--covid19-in-india/covid_vaccine_statewise.csv. Build a Deephaven dashboard that joins the case and testing data by state and date, and shows a state-level overview with: a time-series of confirmed cases, a test positivity rate (positive/total tests), and vaccination progress. Add a picker to filter by state. Use deephaven.ui.dashboard.",
+      "expected_output": "A dashboard joining three COVID India datasets by state/date, showing case trends, test positivity, and vaccination progress with state filtering.",
+      "skill_areas": ["joins", "time-series", "aggregations", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script reads at least two of the three CSV files",
+        "The script performs a join operation on state and/or date columns",
+        "The dashboard includes a time-series chart of case data",
+        "The dashboard includes a computed metric like test positivity rate",
+        "The dashboard has a picker to filter by state"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "hotel-monthly-aggregations",
+      "dataset": "jessemostipak--hotel-booking-demand",
+      "prompt": "I have hotel booking data at evals/data/jessemostipak--hotel-booking-demand/hotel_bookings.csv with 119k rows. Columns include hotel (Resort/City), is_canceled, lead_time, arrival_date_year, arrival_date_month, stays_in_weekend_nights, stays_in_week_nights, adults, children, babies, meal, country, market_segment, adr, and more. Build a Deephaven dashboard with: monthly booking counts aggregated by hotel type, a cancellation rate comparison between Resort and City hotels, average daily rate (adr) by market_segment, and a picker to filter by arrival_date_year. Use agg_by for the aggregations and deephaven.ui.dashboard for layout.",
+      "expected_output": "A dashboard with monthly booking aggregations, cancellation rates by hotel type, ADR by segment, and year filtering.",
+      "skill_areas": ["aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script uses agg_by, count_by, or avg_by for computing aggregated statistics",
+        "The dashboard shows booking counts broken down by hotel type",
+        "The dashboard includes a cancellation rate metric or chart",
+        "The dashboard includes a chart of ADR (average daily rate) by market segment",
+        "The dashboard has a picker to filter by year"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "videogame-sales-ranking",
+      "dataset": "gregorut--videogamesales",
+      "prompt": "I have video game sales data at evals/data/gregorut--videogamesales/vgsales.csv with columns: Rank, Name, Platform, Year, Genre, Publisher, NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales. Build a Deephaven dashboard that aggregates total sales by genre and by platform, shows the top 10 publishers by global sales, and has a time-series of annual global sales trends. Include a picker to filter by genre. Use aggregation operations like sum_by or agg_by, and deephaven.ui.dashboard for layout.",
+      "expected_output": "A dashboard with sales aggregations by genre/platform, top publishers ranking, annual trends, and genre filtering.",
+      "skill_areas": ["aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script uses aggregation operations to compute total sales by category",
+        "The dashboard includes a chart showing sales by genre or platform",
+        "The dashboard shows a ranking or top-N publishers by sales",
+        "The dashboard includes a time-series or trend chart of annual sales",
+        "The dashboard has a picker to filter by genre"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "credit-card-churn-segments",
+      "dataset": "sakshigoyal7--credit-card-customers",
+      "prompt": "I have credit card customer data at evals/data/sakshigoyal7--credit-card-customers/BankChurners.csv with columns including Attrition_Flag, Customer_Age, Gender, Income_Category, Card_Category, Months_on_book, Total_Trans_Amt, Total_Trans_Ct, Credit_Limit, Avg_Utilization_Ratio, and more. Build a Deephaven dashboard analyzing customer churn: aggregate average transaction amount and credit utilization by Attrition_Flag, show distribution of churned vs existing customers by income category and card category, and add a scatter plot of credit limit vs utilization ratio colored by attrition status. Include a picker to filter by Card_Category. Use agg_by for aggregations.",
+      "expected_output": "A churn analysis dashboard with aggregated metrics, distributions by segment, scatter plot, and card category filtering.",
+      "skill_areas": ["aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script uses agg_by or similar to compute aggregated churn metrics",
+        "The dashboard shows a comparison between churned and existing customers",
+        "The dashboard includes a scatter plot with credit limit and utilization",
+        "The dashboard has a chart showing distributions by income or card category",
+        "The dashboard has a picker for Card_Category filtering"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "telco-churn-null-handling",
+      "dataset": "blastchar--telco-customer-churn",
+      "prompt": "I have telecom customer data at evals/data/blastchar--telco-customer-churn/WA_Fn-UseC_-Telco-Customer-Churn.csv. It has 21 columns including customerID, gender, SeniorCitizen, tenure, PhoneService, InternetService, OnlineSecurity, StreamingTV, Contract, MonthlyCharges, TotalCharges, and Churn. Warning: the TotalCharges column is stored as a string and has some blank/null values that need to be handled carefully when converting to numeric. Build a Deephaven dashboard showing churn rates by contract type, monthly charges distribution for churned vs non-churned, and service adoption breakdown. Parse TotalCharges to numeric safely. Include a picker to filter by InternetService type. Use deephaven.ui.dashboard.",
+      "expected_output": "A dashboard that safely handles the TotalCharges null/string issue and shows churn analysis with service breakdowns.",
+      "skill_areas": ["csv", "aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script handles TotalCharges conversion from string to numeric with null safety",
+        "The dashboard shows churn rates broken down by contract type",
+        "The dashboard includes a chart comparing monthly charges by churn status",
+        "The dashboard has a picker for InternetService type filtering",
+        "The script does not crash on null or blank TotalCharges values"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "customer-personality-tab-delimited",
+      "dataset": "imakash3011--customer-personality-analysis",
+      "prompt": "I have customer data at evals/data/imakash3011--customer-personality-analysis/marketing_campaign.csv. Note: this file uses tab delimiters, not commas. It has columns like ID, Year_Birth, Education, Marital_Status, Income, Kidhome, Teenhome, MntWines, MntFruits, MntMeatProducts, MntFishProducts, MntSweetProducts, MntGoldProds, NumDealsPurchases, NumWebPurchases, NumCatalogPurchases, NumStorePurchases, and campaign response columns (AcceptedCmp1-5, Response). Build a Deephaven dashboard showing: total spending by product category aggregated across customers, purchase channel comparison (web vs catalog vs store), and customer segmentation by education level showing average income and spending. Add a picker to filter by Marital_Status. Handle the tab-delimited format correctly.",
+      "expected_output": "A dashboard that correctly loads tab-delimited data and shows customer spending analysis with segmentation.",
+      "skill_areas": ["csv", "aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script correctly handles the tab-delimited CSV format",
+        "The dashboard shows spending aggregations by product category",
+        "The dashboard includes a comparison of purchase channels",
+        "The dashboard shows customer segments by education level",
+        "The dashboard has a picker for Marital_Status filtering"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "pokemon-type-filter-dashboard",
+      "dataset": "abcsds--pokemon",
+      "prompt": "I have Pokemon data at evals/data/abcsds--pokemon/Pokemon.csv with columns: #, Name, Type 1, Type 2, Total, HP, Attack, Defense, Sp. Atk, Sp. Def, Speed, Generation, Legendary. Build an interactive Deephaven dashboard where users can explore Pokemon stats. Include: a scatter plot of Attack vs Defense colored by Type 1, a bar chart of average stats by Generation, a data table showing filtered Pokemon, and a picker to filter by Type 1. When a type is selected, all charts and the table should update. Use deephaven.ui.dashboard with ui.use_state for the filter.",
+      "expected_output": "An interactive Pokemon explorer dashboard with type filtering that updates all panels.",
+      "skill_areas": ["ui", "plotting", "aggregations"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script uses ui.use_state for managing the type filter",
+        "The dashboard includes a scatter plot of Attack vs Defense",
+        "The dashboard includes a bar chart of stats by Generation",
+        "The dashboard includes a data table showing Pokemon",
+        "The dashboard has a picker for Type 1 filtering that affects the displayed data"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "suicide-rates-decade-trends",
+      "dataset": "russellyates88--suicide-rates-overview-1985-to-2016",
+      "prompt": "I have suicide rate data at evals/data/russellyates88--suicide-rates-overview-1985-to-2016/master.csv spanning 1985-2016 with columns: country, year, sex, age, suicides_no, population, suicides/100k pop, gdp_for_year, gdp_per_capita. Build a Deephaven dashboard showing: global suicide rate trends by decade (aggregate suicides_no and population by year), comparison between age groups, and a breakdown by sex. Add a picker to filter by country. Use aggregations to compute rates per 100k. Use deephaven.ui.dashboard for layout with multiple chart panels.",
+      "expected_output": "A dashboard showing suicide rate trends over decades with age/sex breakdowns and country filtering.",
+      "skill_areas": ["aggregations", "time-series", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script aggregates data by year to show trends over time",
+        "The dashboard includes a time-series or trend chart across years",
+        "The dashboard shows a breakdown or comparison by age group",
+        "The dashboard shows a breakdown or comparison by sex",
+        "The dashboard has a picker for country selection"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "insurance-multi-chart-types",
+      "dataset": "mirichoi0218--insurance",
+      "prompt": "I have insurance cost data at evals/data/mirichoi0218--insurance/insurance.csv with columns: age, sex, bmi, children, smoker, region, charges. Build a Deephaven dashboard that uses multiple chart types: a scatter plot of age vs charges colored by smoker status, a histogram of the charges distribution, a bar chart of average charges by region, and a box-style comparison of charges by number of children. Include a picker to filter by region. Use deephaven.ui.dashboard.",
+      "expected_output": "A multi-chart dashboard with scatter, histogram, and bar charts showing insurance cost analysis with region filtering.",
+      "skill_areas": ["plotting", "aggregations", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The dashboard includes a scatter plot showing age vs charges",
+        "The dashboard includes a histogram of charges distribution",
+        "The dashboard includes a bar chart of average charges by region",
+        "The dashboard uses at least three different chart types",
+        "The dashboard has a picker for region filtering"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "wine-quality-correlation",
+      "dataset": "uciml--red-wine-quality-cortez-et-al-2009",
+      "prompt": "I have red wine quality data at evals/data/uciml--red-wine-quality-cortez-et-al-2009/winequality-red.csv with columns: fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, alcohol, quality (score 0-10). Build a Deephaven dashboard for exploring what chemical properties predict wine quality. Include: a scatter plot of alcohol vs quality, average chemical properties aggregated by quality score, a histogram of the quality distribution, and a picker to select which chemical property to plot against quality on the scatter chart. Use deephaven.ui.dashboard.",
+      "expected_output": "A wine analysis dashboard with quality correlations, aggregated chemistry by score, and a dynamic property selector.",
+      "skill_areas": ["plotting", "aggregations", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The dashboard includes a scatter plot relating a chemical property to quality",
+        "The dashboard includes aggregated statistics grouped by quality score",
+        "The dashboard includes a histogram or distribution chart",
+        "The dashboard has a picker that changes which property is displayed",
+        "The script correctly handles column names with spaces"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "breast-cancer-diagnostic",
+      "dataset": "uciml--breast-cancer-wisconsin-data",
+      "prompt": "I have breast cancer diagnostic data at evals/data/uciml--breast-cancer-wisconsin-data/data.csv with columns: id, diagnosis (M/B), and 30 numeric features (radius_mean, texture_mean, perimeter_mean, area_mean, smoothness_mean, etc., plus _se and _worst variants). Build a Deephaven dashboard showing: a scatter plot of radius_mean vs texture_mean colored by diagnosis, aggregated mean feature values for malignant vs benign, a data table of the raw records, and summary counts of each diagnosis. Include a picker to switch between _mean, _se, and _worst feature variants for the scatter plot. Use deephaven.ui.dashboard.",
+      "expected_output": "A diagnostic dashboard comparing malignant vs benign tumors with feature variant selection.",
+      "skill_areas": ["ui", "plotting", "aggregations"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The dashboard shows a scatter plot colored by diagnosis type",
+        "The dashboard includes aggregated feature comparisons between M and B diagnosis",
+        "The dashboard includes a data table of records",
+        "The dashboard has a picker for selecting feature variants",
+        "The script uses ui.dashboard for layout"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "heart-failure-clinical-outcomes",
+      "dataset": "andrewmvd--heart-failure-clinical-data",
+      "prompt": "I have clinical heart failure data at evals/data/andrewmvd--heart-failure-clinical-data/heart_failure_clinical_records_dataset.csv with 299 patients and columns: age, anaemia, creatinine_phosphokinase, diabetes, ejection_fraction, high_blood_pressure, platelets, serum_creatinine, serum_sodium, sex, smoking, time, DEATH_EVENT. Build a Deephaven dashboard with: survival analysis comparing patients who died vs survived (aggregate key metrics by DEATH_EVENT), risk factor charts showing how anaemia, diabetes, high_blood_pressure, and smoking relate to death events, and a scatter plot of ejection_fraction vs serum_creatinine colored by DEATH_EVENT. Include a picker to filter by sex. Use agg_by and deephaven.ui.dashboard.",
+      "expected_output": "A patient outcome dashboard with survival comparisons, risk factor analysis, and sex-based filtering.",
+      "skill_areas": ["aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script uses agg_by or similar to aggregate metrics by DEATH_EVENT",
+        "The dashboard compares outcomes between patients who died and survived",
+        "The dashboard shows risk factor analysis with charts",
+        "The dashboard includes a scatter plot colored by death event",
+        "The dashboard has a picker for sex filtering"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "heart-prediction-categorical-plots",
+      "dataset": "fedesoriano--heart-failure-prediction",
+      "prompt": "I have heart disease data at evals/data/fedesoriano--heart-failure-prediction/heart.csv with columns: Age, Sex, ChestPainType, RestingBP, Cholesterol, FastingBS, RestingECG, MaxHR, ExerciseAngina, Oldpeak, ST_Slope, HeartDisease. Build a Deephaven dashboard showing: counts of heart disease by ChestPainType using a bar chart (pre-aggregate with count_by first, then use dx.bar — do NOT use dx.histogram on string columns), average MaxHR by age groups (bin ages into decades), and a scatter plot of RestingBP vs Cholesterol colored by HeartDisease. Include a picker for ChestPainType filtering. Use deephaven.ui.dashboard.",
+      "expected_output": "A heart disease dashboard that correctly handles categorical data in charts with age binning.",
+      "skill_areas": ["plotting", "aggregations", "csv", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script pre-aggregates categorical data before plotting (uses count_by or agg_by before dx.bar)",
+        "The dashboard includes a bar chart of heart disease counts by chest pain type",
+        "The script bins ages into groups for aggregation",
+        "The dashboard includes a scatter plot of BP vs Cholesterol",
+        "The dashboard has a picker for ChestPainType filtering"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "diabetes-rolling-stats",
+      "dataset": "uciml--pima-indians-diabetes-database",
+      "prompt": "I have diabetes data at evals/data/uciml--pima-indians-diabetes-database/diabetes.csv with columns: Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age, Outcome. Build a Deephaven dashboard that sorts patients by age and computes rolling averages of Glucose and BMI over a window of 20 rows using update_by with rolling_avg. Show: a line chart comparing raw vs smoothed glucose values sorted by age, aggregated health metrics by Outcome (diabetic vs non-diabetic), and a histogram of BMI distribution. Include a picker to filter by Outcome. Use deephaven.ui.dashboard.",
+      "expected_output": "A dashboard with rolling averages via update_by, raw vs smoothed comparisons, and outcome-based filtering.",
+      "skill_areas": ["updateby", "aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script uses update_by with a rolling operation (rolling_avg, rolling_sum, etc.)",
+        "The dashboard shows a comparison of raw vs smoothed values",
+        "The dashboard includes aggregated metrics grouped by Outcome",
+        "The dashboard includes a histogram or distribution chart",
+        "The dashboard has a picker for Outcome filtering"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "students-exam-demographics",
+      "dataset": "spscientist--students-performance-in-exams",
+      "prompt": "I have student exam data at evals/data/spscientist--students-performance-in-exams/StudentsPerformance.csv with columns: gender, race/ethnicity, parental level of education, lunch, test preparation course, math score, reading score, writing score. Build a Deephaven dashboard showing: average scores by test preparation course completion, score distributions by gender, a comparison of math/reading/writing averages by parental education level, and a data table of the raw data. Include a picker to filter by race/ethnicity. Note: some column names contain spaces and special characters — handle them properly in Deephaven queries. Use deephaven.ui.dashboard.",
+      "expected_output": "A student performance dashboard with demographic breakdowns and special character column handling.",
+      "skill_areas": ["aggregations", "plotting", "csv", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script correctly handles column names with spaces and special characters",
+        "The dashboard shows score comparisons by test preparation course",
+        "The dashboard includes score analysis by gender",
+        "The dashboard includes parental education level comparisons",
+        "The dashboard has a picker for race/ethnicity filtering"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "stroke-mixed-types-filtering",
+      "dataset": "fedesoriano--stroke-prediction-dataset",
+      "prompt": "I have stroke prediction data at evals/data/fedesoriano--stroke-prediction-dataset/healthcare-dataset-stroke-data.csv with columns: id, gender, age, hypertension, heart_disease, ever_married, work_type, Residence_type, avg_glucose_level, bmi, smoking_status, stroke. The bmi column may have missing/null values stored as 'N/A' strings. Build a Deephaven dashboard with: stroke rates by work_type and smoking_status using aggregated bar charts, a scatter plot of avg_glucose_level vs bmi (after handling null bmi values), and risk factor analysis showing stroke rates by hypertension and heart_disease status. Include pickers to filter by gender and work_type. Use deephaven.ui.dashboard.",
+      "expected_output": "A stroke risk dashboard that handles mixed types and null bmi values with multi-filter interactivity.",
+      "skill_areas": ["csv", "aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script handles null or N/A values in the bmi column",
+        "The dashboard shows stroke rates by work type or smoking status",
+        "The dashboard includes a scatter plot of glucose vs bmi",
+        "The dashboard shows risk factor analysis for hypertension and heart disease",
+        "The dashboard has at least one picker for filtering"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "mobile-price-feature-analysis",
+      "dataset": "iabhishekofficial--mobile-price-classification",
+      "prompt": "I have mobile phone data split into train and test sets: evals/data/iabhishekofficial--mobile-price-classification/train.csv (2000 rows with price_range 0-3) and evals/data/iabhishekofficial--mobile-price-classification/test.csv (1000 rows with id but no price_range). Build a Deephaven dashboard using the training data that shows: average hardware specs (ram, battery_power, px_height, px_width) aggregated by price_range, a scatter plot of ram vs battery_power colored by price_range, count of phones per price range, and a data table. Create a computed column that labels price_range as Budget/Mid/High/Premium. Include a picker to filter by price_range label. Use deephaven.ui.dashboard.",
+      "expected_output": "A mobile pricing dashboard with feature analysis by price tier and computed labels.",
+      "skill_areas": ["aggregations", "plotting", "ui"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script creates a computed column mapping price_range to text labels",
+        "The dashboard shows hardware specs aggregated by price range",
+        "The dashboard includes a scatter plot of ram vs battery_power",
+        "The dashboard includes a count or distribution by price range",
+        "The dashboard has a picker for price range filtering"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "mall-customers-full-dashboard",
+      "dataset": "vjchoudhary7--customer-segmentation-tutorial-in-python",
+      "prompt": "I have mall customer data at evals/data/vjchoudhary7--customer-segmentation-tutorial-in-python/Mall_Customers.csv with columns: CustomerID, Gender, Age, Annual Income (k$), Spending Score (1-100). Build a comprehensive Deephaven dashboard with: a scatter plot of Annual Income vs Spending Score colored by Gender, age group analysis (bin into 18-25, 26-35, 36-45, 46-55, 56+) showing average income and spending by group, a histogram of spending score distribution, summary statistics panel showing counts and averages, and a data table. Include pickers for Gender and age group filtering. Use ui.use_state for both filters and ensure all panels update when filters change. Use deephaven.ui.dashboard with ui.row, ui.column, ui.stack, and ui.panel for organized layout.",
+      "expected_output": "A comprehensive customer segmentation dashboard with dual filters, multiple chart types, and organized layout.",
+      "skill_areas": ["ui", "plotting", "aggregations", "csv"],
+      "expectations": [
+        "The script executes without errors via dh exec",
+        "The dashboard renders successfully via dh render",
+        "The script uses ui.use_state for managing filter state",
+        "The dashboard includes a scatter plot of income vs spending score",
+        "The script creates age group bins as a computed column",
+        "The dashboard has at least two pickers for filtering",
+        "The dashboard uses ui.dashboard with a multi-panel layout including ui.row or ui.column",
+        "The dashboard includes a data table component"
+      ]
+    }
+  ]
+}

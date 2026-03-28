@@ -48,8 +48,9 @@ node_modules/
 # Build artifacts
 tools/dist/
 
-# Eval data (downloaded datasets)
+# Eval data (downloaded datasets and run output)
 tools/evals/
+tools/evals2/runs/
 
 # Local agent/tool config
 .agents/

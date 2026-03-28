@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <!-- highlight.js for syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <!-- snarkdown: inline markdown parser (~1.9KB, MIT, github.com/developit/snarkdown) -->
+  <script>!function(e,n){"object"==typeof exports&&"undefined"!=typeof module?module.exports=n():"function"==typeof define&&define.amd?define(n):(e=e||self).snarkdown=n()}(this,function(){var e={"":["<em>","</em>"],_:["<strong>","</strong>"],"*":["<strong>","</strong>"],"~":["<s>","</s>"],"\n":["<br />"]," ":["<br />"],"-":["<hr />"]};function n(e){return e.replace(RegExp("^"+(e.match(/^(\t| )+/)||"")[0],"gm"),"")}function r(e){return(e+"").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}return function t(o,a){var c,s,l,g,u,p=/((?:^|\n+)(?:\n---+|\* \*(?: \*)+)\n)|(?:^``` *(\w*)\n([\s\S]*?)\n```$)|((?:(?:^|\n+)(?:\t|  {2,}).+)+\n*)|((?:(?:^|\n)([>*+-]|\d+\.)\s+.*)+)|(?:!\[([^\]]*?)\]\(([^)]+?)\))|(\[)|(\](?:\(([^)]+?)\))?)|(?:(?:^|\n+)([^\s].*)\n(-{3,}|={3,})(?:\n+|$))|(?:(?:^|\n+)(#{1,6})\s*(.+)(?:\n+|$))|(?:`([^`].*?)`)|(  \n\n*|\n{2,}|__|\*\*|[_*]|~~)/gm,f=[],i="",d=a||{},m=0;function h(n){var r=e[n[1]||""],t=f[f.length-1]==n;return r?r[1]?(t?f.pop():f.push(n),r[0|t]):r[0]:n}function $(){for(var e="";f.length;)e+=h(f[f.length-1]);return e}for(o=o.replace(/^\[(.+?)\]:\s*(.+)$/gm,function(e,n,r){return d[n.toLowerCase()]=r,""}).replace(/^\n+|\n+$/g,"");l=p.exec(o);)s=o.substring(m,l.index),m=p.lastIndex,c=l[0],s.match(/[^\\](\\\\)*\\$/)||((u=l[3]||l[4])?c='<pre class="code '+(l[4]?"poetry":l[2].toLowerCase())+'"><code'+(l[2]?' class="language-'+l[2].toLowerCase()+'"':"")+">"+n(r(u).replace(/^\n+|\n+$/g,""))+"</code></pre>":(u=l[6])?(u.match(/\./)&&(l[5]=l[5].replace(/^\d+/gm,"")),g=t(n(l[5].replace(/^\s*[>*+.-]/gm,""))),">"==u?u="blockquote":(u=u.match(/\./)?"ol":"ul",g=g.replace(/^(.*)(\n|$)/gm,"<li>$1</li>")),c="<"+u+">"+g+"</"+u+">"):l[8]?c='<img src="'+r(l[8])+'" alt="'+r(l[7])+'">':l[10]?(i=i.replace("<a>",'<a href="'+r(l[11]||d[s.toLowerCase()])+'">'),c=$()+"</a>"):l[9]?c="<a>":l[12]||l[14]?c="<"+(u="h"+(l[14]?l[14].length:l[13]>"="?1:2))+">"+t(l[12]||l[15],d)+"</"+u+">":l[16]?c="<code>"+r(l[16])+"</code>":(l[17]||l[1])&&(c=h(l[17]||"--"))),i+=s,i+=c;return(i+o.substring(m)+$()).replace(/^\n+|\n+$/g,"")}});</script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .eval-select {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.8125rem;
+      padding: 0.375rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      min-width: 280px;
+      max-width: 400px;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Eval title row ---- */
+    .eval-title-row {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+    .eval-title-row .eval-title {
+      flex: 1;
+    }
+    .eval-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .eval-progress {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Split comparison cards ---- */
+    .comparison-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .comparison-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem 1.25rem;
+      font-family: 'Poppins', sans-serif;
+    }
+    .comparison-card-title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.625rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .comparison-card-title.config-primary { color: #1976d2; }
+    .comparison-card-title.config-baseline { color: #f57f17; }
+    .comparison-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.25rem 0;
+      font-size: 0.8125rem;
+    }
+    .comparison-row-label {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .comparison-row-value {
+      font-weight: 500;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+    }
+    .comparison-card.config-primary .comparison-row-value.winner {
+      background: rgba(33, 150, 243, 0.12);
+    }
+    .comparison-card.config-baseline .comparison-row-value.winner {
+      background: rgba(255, 193, 7, 0.15);
+    }
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 1.5rem;
+    }
+    .split-grid > * {
+      min-width: 0;
+    }
+    .split-row {
+      display: grid;
+      grid-template-columns: subgrid;
+      grid-column: 1 / -1;
+      gap: 0 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .split-row > div {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .split-row > div > .output-file {
+      border: none;
+      border-radius: 0;
+    }
+    /* Grades sub-grid: each assertion row aligns across columns */
+    .grades-pair {
+      display: grid;
+      grid-template-columns: subgrid;
+      grid-column: 1 / -1;
+      margin-bottom: 1.25rem;
+    }
+    .grades-pair > .grades-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: grid;
+      grid-template-rows: subgrid;
+      grid-row: 1 / -1;
+      overflow: hidden;
+    }
+    .grades-assertion-row {
+      padding: 0.625rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .grades-assertion-row:last-child { border-bottom: none; }
+    .grades-summary-row {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .split-pane-header {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius);
+      text-align: center;
+    }
+    .split-pane-header.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .split-pane-header.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content pre code.hljs {
+      background: transparent;
+      padding: 0;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    /* Rendered markdown */
+    .rendered-markdown {
+      font-size: 0.875rem;
+      line-height: 1.65;
+    }
+    .rendered-markdown h1 { font-size: 1.15rem; margin: 0.75rem 0 0.5rem; font-family: 'Poppins', sans-serif; }
+    .rendered-markdown h2 { font-size: 1.0rem; margin: 0.75rem 0 0.375rem; font-family: 'Poppins', sans-serif; }
+    .rendered-markdown h3 { font-size: 0.9375rem; margin: 0.5rem 0 0.25rem; font-family: 'Poppins', sans-serif; }
+    .rendered-markdown p { margin: 0.375rem 0; }
+    .rendered-markdown ul, .rendered-markdown ol { padding-left: 1.5rem; margin: 0.375rem 0; }
+    .rendered-markdown li { margin: 0.2rem 0; }
+    .rendered-markdown code {
+      background: var(--bg);
+      padding: 0.125rem 0.375rem;
+      border-radius: 3px;
+      font-size: 0.8125rem;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .rendered-markdown pre {
+      background: var(--bg);
+      padding: 0.625rem 0.75rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 0.5rem 0;
+    }
+    .rendered-markdown pre code {
+      background: transparent;
+      padding: 0;
+    }
+    .rendered-markdown strong { font-weight: 600; }
+    .rendered-markdown hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (non-collapsed) ---- */
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+    .benchmark-eval-divider {
+      border: none;
+      border-top: 2px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+
+    /* ---- Collapsible section ---- */
+    .section-header-toggle {
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+    .section-header-toggle:hover { color: var(--text); }
+    .section-header-toggle .toggle-icon {
+      font-size: 0.65rem;
+      transition: transform 0.15s;
+    }
+    .section-header-toggle.collapsed .toggle-icon {
+      transform: rotate(-90deg);
+    }
+    .section-body-collapsible {
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+    }
+    .section-body-collapsible.collapsed {
+      max-height: 0 !important;
+      padding: 0;
+    }
+
+    /* ---- Transcript viewer ---- */
+    .transcript-scroll {
+      padding: 0.375rem 0.75rem;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .transcript-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.2rem 0.25rem;
+      font-size: 0.75rem;
+      line-height: 1.35;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .transcript-row:last-child { border-bottom: none; }
+    .transcript-row:hover { background: var(--bg); }
+
+    .t-badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      min-width: 3.25rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .t-badge-user { background: rgba(33, 150, 243, 0.12); color: #1976d2; }
+    .t-badge-think { background: rgba(0,0,0,0.05); color: var(--text-muted); }
+    .t-badge-text { background: rgba(0,0,0,0.05); color: var(--text); }
+    .t-badge-tool { background: rgba(217, 119, 87, 0.12); color: var(--accent); }
+    .t-badge-result { background: transparent; color: var(--text-muted); font-weight: 500; min-width: 3.25rem; border: 1px solid var(--border); }
+
+    .t-time {
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      white-space: nowrap;
+      min-width: 3.25rem;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .t-preview {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+      font-size: 0.75rem;
+      min-width: 0;
+    }
+    .t-status { font-weight: 600; font-size: 0.75rem; flex-shrink: 0; }
+    .t-status-ok { color: var(--green); }
+    .t-status-err { color: var(--red); }
+    .t-tokens {
+      color: var(--text-muted);
+      font-size: 0.6rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .transcript-summary {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-left: 0.5rem;
+    }
+    .transcript-row[style*="cursor"] { position: relative; }
+    .transcript-row[style*="cursor"]:hover { background: rgba(217, 119, 87, 0.04); }
+    .transcript-row.expanded {
+      background: var(--bg);
+      border-bottom-color: transparent;
+    }
+    .t-expanded {
+      padding: 0.375rem 0.75rem 0.5rem 4.25rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .t-expanded pre {
+      font-size: 0.75rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      color: var(--text);
+      margin: 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below.</div>
+      </div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main" id="outputs-main">
+      <!-- Dynamic content rendered by JS -->
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    /*__EMBEDDED_DATA__*/
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentEvalIndex = 0;
+    let visitedEvals = new Set();
+    let evalGroups = [];  // [{eval_name, eval_id, prompt, runs: [{config, run}]}]
+
+    // ---- Build eval groups from flat runs ----
+    function buildEvalGroups() {
+      const runs = EMBEDDED_DATA.runs || [];
+      const map = {};
+      for (const run of runs) {
+        // Attach transcript to the raw.jsonl file object so renderFileContent can use it
+        if (run.transcript) {
+          const rawFile = (run.outputs || []).find(f => f.name === "raw.jsonl");
+          if (rawFile) rawFile._transcript = run.transcript;
+        }
+        const key = run.eval_name || run.eval_id || run.id;
+        if (!map[key]) {
+          map[key] = {
+            eval_name: run.eval_name || key,
+            eval_id: run.eval_id,
+            prompt: run.prompt,
+            runs: [],
+          };
+        }
+        map[key].runs.push(run);
+      }
+      evalGroups = Object.values(map);
+      // Sort by eval_id
+      evalGroups.sort((a, b) => (a.eval_id || 0) - (b.eval_id || 0));
+    }
+
+    // ---- Init ----
+    async function init() {
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+
+      buildEvalGroups();
+      showEval(0);
+    }
+
+    function onSelectEval(val) {
+      saveAllFeedback();
+      showEval(parseInt(val));
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentEvalIndex + delta;
+      if (newIndex >= 0 && newIndex < evalGroups.length) {
+        saveAllFeedback();
+        showEval(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentEvalIndex === 0;
+      document.getElementById("next-btn").disabled = currentEvalIndex === evalGroups.length - 1;
+    }
+
+    // ---- Show an eval group ----
+    function showEval(index) {
+      currentEvalIndex = index;
+      const group = evalGroups[index];
+      const container = document.getElementById("outputs-main");
+      container.innerHTML = "";
+
+
+      // Eval title row: title ... N of N ... [select]
+      const titleRow = document.createElement("div");
+      titleRow.className = "eval-title-row";
+      const titleDiv = document.createElement("div");
+      titleDiv.className = "eval-title";
+      titleDiv.textContent = group.eval_name.replace(/-/g, " ");
+      titleRow.appendChild(titleDiv);
+      const progress = document.createElement("div");
+      progress.className = "eval-progress";
+      progress.textContent = (index + 1) + " of " + evalGroups.length;
+      titleRow.appendChild(progress);
+      const select = document.createElement("select");
+      select.className = "eval-select";
+      select.id = "eval-select";
+      select.onchange = function() { onSelectEval(this.value); };
+      for (let i = 0; i < evalGroups.length; i++) {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = (i + 1) + ". " + evalGroups[i].eval_name.replace(/-/g, " ");
+        if (i === index) opt.selected = true;
+        select.appendChild(opt);
+      }
+      titleRow.appendChild(select);
+      container.appendChild(titleRow);
+
+      // Prompt section
+      const promptSection = document.createElement("div");
+      promptSection.className = "section";
+      promptSection.innerHTML =
+        '<div class="section-header">Prompt</div>' +
+        '<div class="section-body"><div class="prompt-text">' + escapeHtml(group.prompt) + '</div></div>';
+      container.appendChild(promptSection);
+
+      // Determine if this is a paired (split) view
+      const withRuns = group.runs.filter(r => r.configuration === "with_skill");
+      const withoutRuns = group.runs.filter(r => r.configuration === "without_skill");
+      const isPaired = withRuns.length > 0 && withoutRuns.length > 0;
+
+      if (isPaired) {
+        // Use first run of each config
+        const withRun = withRuns[0];
+        const withoutRun = withoutRuns[0];
+
+        // Comparison stats header
+        const statsDiv = document.createElement("div");
+        statsDiv.className = "comparison-header";
+        statsDiv.innerHTML = buildComparisonStats(withRun, withoutRun);
+        container.appendChild(statsDiv);
+
+        // Grid-based split: each section pair shares a row
+        const grid = document.createElement("div");
+        grid.className = "split-grid";
+
+        // Row: column headers
+        addGridRow(grid, [
+          '<div class="split-pane-header config-primary">With Skill</div>',
+          '<div class="split-pane-header config-baseline">Without Skill</div>',
+        ]);
+
+        // Grades: sub-grid with aligned assertion rows
+        renderPairedGrades(grid, withRun.grading, withoutRun.grading);
+
+        // Output files: paired by name, each wrapped in .section
+        const withOutputs = withRun.outputs || [];
+        const withoutOutputs = withoutRun.outputs || [];
+        const allNames = [...new Set([...withOutputs.map(f => f.name), ...withoutOutputs.map(f => f.name)])];
+        for (const name of allNames) {
+          const wFile = withOutputs.find(f => f.name === name);
+          const woFile = withoutOutputs.find(f => f.name === name);
+          const row = document.createElement("div");
+          row.className = "split-row";
+          const leftCell = document.createElement("div");
+          const rightCell = document.createElement("div");
+          if (wFile) { renderSingleOutputFile(leftCell, wFile); } else { leftCell.innerHTML = '<div class="empty-state">—</div>'; }
+          if (woFile) { renderSingleOutputFile(rightCell, woFile); } else { rightCell.innerHTML = '<div class="empty-state">—</div>'; }
+          row.appendChild(leftCell);
+          row.appendChild(rightCell);
+          grid.appendChild(row);
+        }
+
+        container.appendChild(grid);
+      } else {
+        // Single run view
+        for (const run of group.runs) {
+          renderRunPane(container, run);
+        }
+      }
+
+      // Feedback section
+      const fbSection = document.createElement("div");
+      fbSection.className = "section";
+      const fbRunId = group.runs[0].id;
+      fbSection.innerHTML =
+        '<div class="section-header">Your Feedback</div>' +
+        '<div class="section-body">' +
+        '<textarea class="feedback-textarea" id="feedback-' + escapeAttr(fbRunId) + '" ' +
+        'placeholder="What do you think of this output? Any issues, suggestions, or things that look great?" ' +
+        'oninput="debounceSave()"></textarea>' +
+        '<div class="feedback-status" id="feedback-status"></div>' +
+        '</div>';
+      container.appendChild(fbSection);
+
+      // Load existing feedback
+      const ta = fbSection.querySelector("textarea");
+      ta.value = feedbackMap[fbRunId] || "";
+
+      updateNavButtons();
+
+      // Track visited
+      visitedEvals.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedEvals.size >= evalGroups.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll to top
+      container.scrollTop = 0;
+    }
+
+    // ---- Build comparison stats ----
+    function buildComparisonStats(withRun, withoutRun) {
+      // Gather all stats as {label, wVal, woVal, wFmt, woFmt, winMode}
+      const stats = [];
+
+      const withTurns = withRun.metrics?.total_turns ?? withRun.timing?.num_turns;
+      const withoutTurns = withoutRun.metrics?.total_turns ?? withoutRun.timing?.num_turns;
+      if (withTurns != null || withoutTurns != null) {
+        stats.push({ label: "Turns", wVal: withTurns, woVal: withoutTurns,
+          wFmt: withTurns != null ? withTurns : "—",
+          woFmt: withoutTurns != null ? withoutTurns : "—",
+          winMode: "lower" });
+      }
+
+      const withTime = withRun.metrics?.duration_seconds || withRun.timing?.total_duration_seconds;
+      const withoutTime = withoutRun.metrics?.duration_seconds || withoutRun.timing?.total_duration_seconds;
+      if (withTime != null || withoutTime != null) {
+        stats.push({ label: "Time", wVal: withTime, woVal: withoutTime,
+          wFmt: withTime != null ? withTime.toFixed(1) + "s" : "—",
+          woFmt: withoutTime != null ? withoutTime.toFixed(1) + "s" : "—",
+          winMode: "lower" });
+      }
+
+      const withTokens = withRun.metrics?.token_usage;
+      const withoutTokens = withoutRun.metrics?.token_usage;
+      if (withTokens || withoutTokens) {
+        const wIn = withTokens?.total_input_tokens;
+        const woIn = withoutTokens?.total_input_tokens;
+        stats.push({ label: "Base Input Tokens", wVal: wIn, woVal: woIn,
+          wFmt: wIn != null ? fmtNum(wIn) : "—",
+          woFmt: woIn != null ? fmtNum(woIn) : "—",
+          winMode: "lower" });
+
+        const wOut = withTokens?.total_output_tokens;
+        const woOut = withoutTokens?.total_output_tokens;
+        stats.push({ label: "Output Tokens", wVal: wOut, woVal: woOut,
+          wFmt: wOut != null ? fmtNum(wOut) : "—",
+          woFmt: woOut != null ? fmtNum(woOut) : "—",
+          winMode: "lower" });
+
+        const wCacheRead = withTokens?.total_cache_read_tokens;
+        const woCacheRead = withoutTokens?.total_cache_read_tokens;
+        stats.push({ label: "Cache Read Tokens", wVal: wCacheRead, woVal: woCacheRead,
+          wFmt: wCacheRead != null ? fmtNum(wCacheRead) : "—",
+          woFmt: woCacheRead != null ? fmtNum(woCacheRead) : "—",
+          winMode: "lower" });
+
+        const wCache5m = withTokens?.total_cache_creation_5m_tokens;
+        const woCache5m = withoutTokens?.total_cache_creation_5m_tokens;
+        if ((wCache5m || 0) > 0 || (woCache5m || 0) > 0) {
+          stats.push({ label: "Cache Write 5m Tokens", wVal: wCache5m, woVal: woCache5m,
+            wFmt: wCache5m != null ? fmtNum(wCache5m) : "—",
+            woFmt: woCache5m != null ? fmtNum(woCache5m) : "—",
+            winMode: "lower" });
+        }
+
+        const wCache1h = withTokens?.total_cache_creation_1h_tokens;
+        const woCache1h = withoutTokens?.total_cache_creation_1h_tokens;
+        if ((wCache1h || 0) > 0 || (woCache1h || 0) > 0) {
+          stats.push({ label: "Cache Write 1h Tokens", wVal: wCache1h, woVal: woCache1h,
+            wFmt: wCache1h != null ? fmtNum(wCache1h) : "—",
+            woFmt: woCache1h != null ? fmtNum(woCache1h) : "—",
+            winMode: "lower" });
+        }
+
+        const wCost = withTokens?.estimated_cost_usd;
+        const woCost = withoutTokens?.estimated_cost_usd;
+        if (wCost != null || woCost != null) {
+          stats.push({ label: "Estimated Cost", wVal: wCost, woVal: woCost,
+            wFmt: wCost != null ? "$" + wCost.toFixed(2) : "—",
+            woFmt: woCost != null ? "$" + woCost.toFixed(2) : "—",
+            winMode: "lower" });
+        }
+      }
+
+      const withGrade = withRun.grading?.summary;
+      const withoutGrade = withoutRun.grading?.summary;
+      if (withGrade || withoutGrade) {
+        const wRate = withGrade?.pass_rate;
+        const woRate = withoutGrade?.pass_rate;
+        stats.push({ label: "Pass Rate", wVal: wRate, woVal: woRate,
+          wFmt: wRate != null ? Math.round(wRate * 100) + "%" : "—",
+          woFmt: woRate != null ? Math.round(woRate * 100) + "%" : "—",
+          winMode: "higher" });
+      }
+
+      // Determine winners per stat
+      const winners = stats.map(s => {
+        if (s.wVal != null && s.woVal != null && s.wVal !== s.woVal) {
+          return (s.winMode === "higher" ? s.wVal > s.woVal : s.wVal < s.woVal) ? "with" : "without";
+        }
+        return null;
+      });
+
+      // Build two cards
+      function buildCard(side, cssClass, title) {
+        let html = '<div class="comparison-card ' + cssClass + '">';
+        html += '<div class="comparison-card-title ' + (side === "with" ? "config-primary" : "config-baseline") + '">' + title + '</div>';
+        for (let i = 0; i < stats.length; i++) {
+          const s = stats[i];
+          const val = side === "with" ? s.wFmt : s.woFmt;
+          const isWinner = winners[i] === side;
+          html += '<div class="comparison-row">';
+          html += '<span class="comparison-row-label">' + s.label + '</span>';
+          html += '<span class="comparison-row-value' + (isWinner ? " winner" : "") + '">' + val + '</span>';
+          html += '</div>';
+        }
+        html += '</div>';
+        return html;
+      }
+
+      return buildCard("with", "config-primary", "With Skill") +
+             buildCard("without", "config-baseline", "Without Skill");
+    }
+
+    // ---- Render a single run into a pane (used for non-paired view) ----
+    function renderRunPane(container, run) {
+      if (run.grading) {
+        const gradesSection = document.createElement("div");
+        gradesSection.className = "section";
+        gradesSection.innerHTML = '<div class="section-header">Grades</div>';
+        const gradesBody = document.createElement("div");
+        gradesBody.className = "section-body";
+        gradesBody.innerHTML = buildGradesHtml(run.grading);
+        gradesSection.appendChild(gradesBody);
+        container.appendChild(gradesSection);
+      }
+
+      const outputsSection = document.createElement("div");
+      outputsSection.className = "section";
+      outputsSection.innerHTML = '<div class="section-header">Output</div>';
+      const outputsBody = document.createElement("div");
+      outputsBody.className = "section-body";
+      renderOutputFiles(outputsBody, run.outputs || []);
+      outputsSection.appendChild(outputsBody);
+      container.appendChild(outputsSection);
+    }
+
+    // ---- Transcript parser & renderer ----
+    function parseTranscript(md) {
+      if (!md) return [];
+      const turns = [];
+      const turnRe = /^## Turn (\d+) — (User|Assistant) \*\(\+(\d+)ms\)\*/gm;
+      const sections = [];
+      let m;
+      while ((m = turnRe.exec(md)) !== null) {
+        if (sections.length > 0) sections[sections.length - 1].body = md.substring(sections[sections.length - 1].s, m.index);
+        sections.push({ num: +m[1], role: m[2], ms: +m[3], s: m.index + m[0].length });
+      }
+      if (sections.length > 0) sections[sections.length - 1].body = md.substring(sections[sections.length - 1].s);
+
+      for (const sec of sections) {
+        const b = sec.body || "";
+        if (sec.role === "User") {
+          const trMatch = b.match(/### Tool Result \*\(\+(\d+)ms\)\*\n\*\*Status:\*\* (\*\*ERROR\*\*|success)/);
+          if (trMatch) {
+            const outMatch = b.match(/\*\*Output:\*\*\n```\n?([\s\S]*?)```/);
+            const full = outMatch ? outMatch[1].trim() : "";
+            turns.push({ type: "result", ms: +trMatch[1], ok: !trMatch[2].includes("ERROR"),
+              preview: full.split("\n")[0].substring(0, 100), full: full });
+          } else {
+            const text = b.replace(/^[\s\n]+/, "").replace(/\n\.\.\. \(\d+ chars total\)\s*$/, "").trim();
+            turns.push({ type: "user", ms: sec.ms, preview: text.split("\n")[0].substring(0, 120), full: text });
+          }
+          continue;
+        }
+        // Assistant — may have thinking, response, tool use, tool result sub-blocks
+        const thinkM = b.match(/### Thinking[^\n]*~(\d+) words?\)?\n([\s\S]*?)(?=\n###|\n\*Tokens:|$)/);
+        if (thinkM) {
+          const full = thinkM[2].trim();
+          turns.push({ type: "think", ms: sec.ms, words: +thinkM[1], preview: full.substring(0, 100), full: full });
+        }
+        const respM = b.match(/### Response\n([\s\S]*?)(?=\n###|\n\*Tokens:|$)/);
+        if (respM) {
+          const full = respM[1].trim();
+          turns.push({ type: "text", ms: sec.ms, preview: full.substring(0, 120), full: full, tok: parseTok(b) });
+        }
+        const toolRe = /### Tool Use: (\w+)\n\*\*Input:\*\* ([\s\S]*?)(?=\n###|\n\*Tokens:|$)/g;
+        let tm;
+        while ((tm = toolRe.exec(b)) !== null) {
+          const rawInput = tm[2].trim();
+          turns.push({ type: "tool", ms: sec.ms, name: tm[1], preview: toolTarget(tm[1], rawInput), full: rawInput, tok: parseTok(b) });
+        }
+        const trRe = /### Tool Result \*\(\+(\d+)ms\)\*\n\*\*Status:\*\* (\*\*ERROR\*\*|success)/g;
+        let tr;
+        while ((tr = trRe.exec(b)) !== null) {
+          const after = b.substring(tr.index + tr[0].length);
+          const outM = after.match(/\*\*Output:\*\*\n```\n?([\s\S]*?)```/);
+          const full = outM ? outM[1].trim() : "";
+          turns.push({ type: "result", ms: +tr[1], ok: !tr[2].includes("ERROR"),
+            preview: full.split("\n")[0].substring(0, 100), full: full });
+        }
+        if (!thinkM && !respM && !tm && !tr) {
+          const bare = b.replace(/^[\s\n]+/, "").replace(/\n\*Tokens:.*$/, "").trim();
+          if (bare) {
+            turns.push({ type: "text", ms: sec.ms, preview: bare.split("\n")[0].substring(0, 120), full: bare, tok: parseTok(b) });
+          }
+        }
+      }
+      return turns;
+    }
+
+    function parseTok(t) {
+      const m = t.match(/\*Tokens: in=(\d+), out=(\d+)\*/);
+      return m ? { i: +m[1], o: +m[2] } : null;
+    }
+
+    function toolTarget(name, input) {
+      try {
+        const clean = input.replace(/\n\.\.\. \(\d+ chars total\)$/, "");
+        const obj = JSON.parse(clean);
+        if (name === "Read" || name === "Write") return (obj.file_path || "").split("/").pop() || input.substring(0, 60);
+        if (name === "Bash") { const c = obj.command || ""; return c.length > 80 ? c.substring(0, 77) + "..." : c; }
+        if (name === "Glob") return obj.pattern || input.substring(0, 60);
+        if (name === "Grep") return obj.pattern || input.substring(0, 60);
+        return input.substring(0, 60);
+      } catch { return input.substring(0, 60).replace(/\n/g, " "); }
+    }
+
+    function fmtTime(ms) {
+      return ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s";
+    }
+
+    function buildTranscriptInline(md) {
+      if (!md) return null;
+      const turns = parseTranscript(md);
+      if (turns.length === 0) return null;
+
+      const wrap = document.createElement("div");
+      wrap.className = "transcript-scroll";
+
+      for (const t of turns) {
+        const row = document.createElement("div");
+        row.className = "transcript-row";
+
+        // Badge
+        const badge = document.createElement("span");
+        badge.className = "t-badge";
+        if (t.type === "user") { badge.textContent = "USER"; badge.classList.add("t-badge-user"); }
+        else if (t.type === "think") { badge.textContent = "THINK"; badge.classList.add("t-badge-think"); }
+        else if (t.type === "text") { badge.textContent = "TEXT"; badge.classList.add("t-badge-text"); }
+        else if (t.type === "tool") { badge.textContent = t.name || "TOOL"; badge.classList.add("t-badge-tool"); }
+        else if (t.type === "result") { badge.textContent = "RESULT"; badge.classList.add("t-badge-result"); }
+        row.appendChild(badge);
+
+        // Time
+        const time = document.createElement("span");
+        time.className = "t-time";
+        time.textContent = "+" + fmtTime(t.ms);
+        row.appendChild(time);
+
+        // Status for results
+        if (t.type === "result") {
+          const st = document.createElement("span");
+          st.className = "t-status " + (t.ok ? "t-status-ok" : "t-status-err");
+          st.textContent = t.ok ? "\u2713" : "\u2717";
+          row.appendChild(st);
+        }
+
+        // Preview (collapsed single line)
+        const prev = document.createElement("span");
+        prev.className = "t-preview";
+        if (t.type === "think" && t.words) prev.textContent = "~" + t.words + " words \u00b7 " + (t.preview || "");
+        else prev.textContent = t.preview || "";
+        row.appendChild(prev);
+
+        // Tokens
+        if (t.tok) {
+          const tok = document.createElement("span");
+          tok.className = "t-tokens";
+          tok.textContent = "in:" + fmtNum(t.tok.i) + " out:" + fmtNum(t.tok.o);
+          row.appendChild(tok);
+        }
+
+        // Click to expand/collapse full content
+        if (t.full && t.full.length > (t.preview || "").length) {
+          row.style.cursor = "pointer";
+          const fullDiv = document.createElement("div");
+          fullDiv.className = "t-expanded";
+          fullDiv.style.display = "none";
+          const pre = document.createElement("pre");
+          pre.textContent = t.full;
+          fullDiv.appendChild(pre);
+
+          row.onclick = function(e) {
+            const expanded = fullDiv.style.display !== "none";
+            fullDiv.style.display = expanded ? "none" : "block";
+            row.classList.toggle("expanded", !expanded);
+          };
+
+          // Append full content after the row (sibling, not child — keeps row layout clean)
+          const fragment = document.createDocumentFragment();
+          fragment.appendChild(row);
+          fragment.appendChild(fullDiv);
+          wrap.appendChild(fragment);
+        } else {
+          wrap.appendChild(row);
+        }
+      }
+
+      return wrap;
+    }
+
+    // ---- Grid helpers for paired view ----
+    function addGridRow(grid, htmlParts) {
+      const row = document.createElement("div");
+      row.className = "split-row";
+      for (const html of htmlParts) {
+        const cell = document.createElement("div");
+        cell.innerHTML = html;
+        row.appendChild(cell);
+      }
+      grid.appendChild(row);
+    }
+
+    function buildGradesSectionHtml(grading) {
+      return '<div class="section">' +
+        '<div class="section-header">Grades</div>' +
+        '<div class="section-body">' + buildGradesHtml(grading) + '</div>' +
+        '</div>';
+    }
+
+    // ---- Paired grades with row-aligned assertions via subgrid ----
+    function renderPairedGrades(grid, withGrading, withoutGrading) {
+      const withExps = withGrading?.expectations || [];
+      const withoutExps = withoutGrading?.expectations || [];
+
+      // Collect all unique assertion texts, preserving order
+      const allTexts = [];
+      const seen = new Set();
+      for (const exp of [...withExps, ...withoutExps]) {
+        if (!seen.has(exp.text)) {
+          seen.add(exp.text);
+          allTexts.push(exp.text);
+        }
+      }
+
+      // Total rows: header + summary + N assertions
+      const totalRows = 2 + allTexts.length;
+
+      const pair = document.createElement("div");
+      pair.className = "grades-pair";
+      pair.style.gridTemplateRows = "repeat(" + totalRows + ", auto)";
+
+      // Build left (with) and right (without) columns
+      for (let side = 0; side < 2; side++) {
+        const grading = side === 0 ? withGrading : withoutGrading;
+        const exps = side === 0 ? withExps : withoutExps;
+        const summary = grading?.summary || {};
+
+        const col = document.createElement("div");
+        col.className = "grades-col";
+
+        // Header row
+        const headerDiv = document.createElement("div");
+        headerDiv.className = "section-header";
+        headerDiv.textContent = "Grades";
+        col.appendChild(headerDiv);
+
+        // Summary row
+        const summaryDiv = document.createElement("div");
+        summaryDiv.className = "grades-summary-row";
+        if (grading) {
+          const passRate = summary.pass_rate != null ? Math.round(summary.pass_rate * 100) + "%" : "?";
+          const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+          summaryDiv.innerHTML =
+            '<div class="grades-summary">' +
+            '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>' +
+            '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>' +
+            '</div>';
+        } else {
+          summaryDiv.innerHTML = '<span style="color:var(--text-muted);font-style:italic;">No grades</span>';
+        }
+        col.appendChild(summaryDiv);
+
+        // One row per assertion
+        for (const text of allTexts) {
+          const exp = exps.find(e => e.text === text);
+          const rowDiv = document.createElement("div");
+          rowDiv.className = "grades-assertion-row";
+          if (exp) {
+            const statusClass = exp.passed ? "pass" : "fail";
+            const statusIcon = exp.passed ? "\u2713" : "\u2717";
+            rowDiv.innerHTML =
+              '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>' +
+              '<span>' + escapeHtml(exp.text) + '</span>' +
+              (exp.evidence ? '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>' : '');
+          } else {
+            rowDiv.innerHTML = '<span style="color:var(--text-muted);">—</span>';
+          }
+          col.appendChild(rowDiv);
+        }
+
+        pair.appendChild(col);
+      }
+
+      grid.appendChild(pair);
+    }
+
+    function renderSingleOutputFile(container, file) {
+      const fileDiv = document.createElement("div");
+      fileDiv.className = "output-file";
+
+      const header = document.createElement("div");
+      header.className = "output-file-header";
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = file.name;
+      header.appendChild(nameSpan);
+      const dlBtn = document.createElement("a");
+      dlBtn.className = "dl-btn";
+      dlBtn.textContent = "Download";
+      dlBtn.download = file.name;
+      dlBtn.href = getDownloadUri(file);
+      header.appendChild(dlBtn);
+      fileDiv.appendChild(header);
+
+      const content = document.createElement("div");
+      content.className = "output-file-content";
+
+      renderFileContent(content, file);
+
+      fileDiv.appendChild(content);
+      container.appendChild(fileDiv);
+    }
+
+    // ---- Build grades HTML ----
+    function buildGradesHtml(grading) {
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = "";
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+      return html;
+    }
+
+    // ---- Render output files ----
+    function renderOutputFiles(container, outputs) {
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        renderFileContent(content, file);
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- Shared file content renderer ----
+    function renderFileContent(content, file) {
+      if (file.type === "text") {
+        if (file.name.endsWith(".md")) {
+          const div = document.createElement("div");
+          div.className = "rendered-markdown";
+          div.innerHTML = snarkdown(file.content);
+          // Highlight any code blocks inside the rendered markdown
+          div.querySelectorAll("pre code").forEach(block => hljs.highlightElement(block));
+          content.appendChild(div);
+        } else if (file.name.endsWith(".py")) {
+          const pre = document.createElement("pre");
+          const code = document.createElement("code");
+          code.className = "language-python";
+          code.textContent = file.content;
+          pre.appendChild(code);
+          content.appendChild(pre);
+          hljs.highlightElement(code);
+        } else {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        }
+      } else if (file.type === "image") {
+        const img = document.createElement("img");
+        img.src = file.data_uri;
+        img.alt = file.name;
+        content.appendChild(img);
+      } else if (file.type === "pdf") {
+        const iframe = document.createElement("iframe");
+        iframe.src = file.data_uri;
+        content.appendChild(iframe);
+      } else if (file.type === "xlsx") {
+        renderXlsx(content, file.data_b64);
+      } else if (file.type === "binary" && file._transcript) {
+        // raw.jsonl with transcript: render transcript viewer + download link
+        const txEl = buildTranscriptInline(file._transcript);
+        if (txEl) content.appendChild(txEl);
+        const a = document.createElement("a");
+        a.className = "download-link";
+        a.href = file.data_uri;
+        a.download = file.name;
+        a.textContent = "Download " + file.name;
+        a.style.marginTop = txEl ? "0.75rem" : "0";
+        content.appendChild(a);
+      } else if (file.type === "binary") {
+        const a = document.createElement("a");
+        a.className = "download-link";
+        a.href = file.data_uri;
+        a.download = file.name;
+        a.textContent = "Download " + file.name;
+        content.appendChild(a);
+      } else if (file.type === "error") {
+        const pre = document.createElement("pre");
+        pre.textContent = file.content;
+        pre.style.color = "var(--red)";
+        content.appendChild(pre);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Feedback ----
+    let saveTimeout = null;
+    function debounceSave() {
+      clearTimeout(saveTimeout);
+      document.getElementById("feedback-status").textContent = "";
+      saveTimeout = setTimeout(() => saveAllFeedback(), 800);
+    }
+
+    function saveAllFeedback() {
+      // Save current textarea
+      const group = evalGroups[currentEvalIndex];
+      if (!group) return;
+      const runId = group.runs[0].id;
+      const ta = document.querySelector("#outputs-main textarea");
+      if (ta) {
+        const text = ta.value;
+        if (text.trim() === "") {
+          delete feedbackMap[runId];
+        } else {
+          feedbackMap[runId] = text;
+        }
+      }
+
+      // Build reviews array
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        const el = document.getElementById("feedback-status");
+        if (el) el.textContent = "Saved";
+      }).catch(() => {
+        const el = document.getElementById("feedback-status");
+        if (el) el.textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      saveAllFeedback();
+
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const g of evalGroups) {
+        const runId = g.runs[0].id;
+        reviews.push({ run_id: runId, feedback: feedbackMap[runId] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      saveAllFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function fmtNum(n) {
+      if (n == null) return "—";
+      return n.toLocaleString("en-US");
+    }
+
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function escapeAttr(text) {
+      return text.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "&mdash;";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : fmtNum(parseFloat(stat.mean.toFixed(1)));
+        const s = pct ? (stat.stddev * 100).toFixed(0) : fmtNum(parseFloat(stat.stddev.toFixed(1)));
+        return m + suffix + " &plusmn; " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "&mdash;") + "</td></tr>";
+
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "&mdash;") + "</td></tr>";
+      }
+
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens ? fmtNum(parseFloat(delta.tokens)) : "&mdash;") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (let ei = 0; ei < evalIds.length; ei++) {
+          const evalId = evalIds[ei];
+
+          // HR divider between evals
+          if (ei > 0) {
+            html += '<hr class="benchmark-eval-divider">';
+          }
+
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + fmtNum(r.passed || 0) + "/" + fmtNum(r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? fmtNum(parseFloat(r.time_seconds.toFixed(1))) : "&mdash;") + "</td>";
+              if (hasErrors) html += "<td>" + fmtNum(r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? fmtNum(parseFloat((times.reduce((a, b) => a + b, 0) / times.length).toFixed(1))) : "&mdash;") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "&mdash; ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>
