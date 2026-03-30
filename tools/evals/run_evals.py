@@ -1,19 +1,19 @@
-"""Evals2 pipeline orchestrator.
+"""Evals pipeline orchestrator.
 
 Runs eval datasets through claude -p with and without the skill, then validates
 outputs using dh render, parses session logs, and produces results compatible
 with skill-creator's grading and viewer infrastructure.
 
 Usage:
-    uv run run-evals2                                # run all evals, both configs
-    uv run run-evals2 --config with_skill            # only with-skill runs
-    uv run run-evals2 --config without_skill         # only baseline runs
-    uv run run-evals2 --evals 1 2 3                  # specific eval IDs
-    uv run run-evals2 --parallel 5                   # concurrency level
-    uv run run-evals2 --stage run                    # just run (no validate/parse)
-    uv run run-evals2 --stage validate --run-id X    # validate existing run
-    uv run run-evals2 --stage parse --run-id X       # parse existing run
-    uv run run-evals2 --skip-existing                # resume interrupted run
+    uv run run-evals                                # run all evals, both configs
+    uv run run-evals --config with_skill            # only with-skill runs
+    uv run run-evals --config without_skill         # only baseline runs
+    uv run run-evals --evals 1 2 3                  # specific eval IDs
+    uv run run-evals --parallel 5                   # concurrency level
+    uv run run-evals --stage run                    # just run (no validate/parse)
+    uv run run-evals --stage validate --run-id X    # validate existing run
+    uv run run-evals --stage parse --run-id X       # parse existing run
+    uv run run-evals --skip-existing                # resume interrupted run
 """
 
 from __future__ import annotations
@@ -34,11 +34,11 @@ from rich.table import Table
 console = Console()
 
 TOOLS_DIR = Path(__file__).resolve().parent.parent  # tools/
-EVALS2_DIR = Path(__file__).resolve().parent  # tools/evals2/
-EVALS_DATA_DIR = TOOLS_DIR / "evals" / "data"
-EVALS2_RUNS_DIR = EVALS2_DIR / "runs"
-PROMPT_TEMPLATE_PATH = EVALS2_DIR / "prompt.md"
-EVALS_JSON_PATH = EVALS2_DIR / "evals.json"
+EVALS_DIR = Path(__file__).resolve().parent  # tools/evals/
+EVALS_DATA_DIR = EVALS_DIR / "data"
+EVALS_RUNS_DIR = EVALS_DIR / "runs"
+PROMPT_TEMPLATE_PATH = EVALS_DIR / "prompt.md"
+EVALS_JSON_PATH = EVALS_DIR / "evals.json"
 SKILL_DIR = TOOLS_DIR.parent / "skills" / "deephaven-core-query-writing"
 
 # Import parse_session from sibling module
@@ -63,16 +63,73 @@ def load_evals(eval_ids: list[int] | None = None) -> list[dict]:
     return evals
 
 
+def ensure_eval_datasets(evals: list[dict]) -> None:
+    """Ensure all required datasets exist locally, downloading missing ones."""
+    from download_eval_data import (
+        KAGGLE_API,
+        api_get,
+        download_and_extract,
+        write_folder_manifest,
+    )
+
+    needed: dict[str, str] = {}
+    for e in evals:
+        slug = e.get("dataset", "")
+        if not slug:
+            continue
+        folder_name = slug.replace("/", "--")
+        # slug in evals.json is already in folder format (owner--name)
+        needed[folder_name] = slug
+
+    EVALS_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    missing = []
+    for folder_name, slug in needed.items():
+        dest = EVALS_DATA_DIR / folder_name
+        csvs = list(dest.glob("*.csv")) if dest.exists() else []
+        if not csvs:
+            missing.append((folder_name, slug))
+
+    if not missing:
+        console.print(f"[green]All {len(needed)} eval datasets present[/green]")
+        return
+
+    console.print(
+        f"[cyan]Downloading {len(missing)} missing dataset(s)...[/cyan]"
+    )
+
+    import httpx
+
+    with httpx.Client() as client:
+        for folder_name, slug in missing:
+            # Convert folder format (owner--name) to API format (owner/name)
+            ref = slug.replace("--", "/")
+            dest = EVALS_DATA_DIR / folder_name
+            console.print(f"  Downloading {ref}...", end=" ")
+            csv_filenames = download_and_extract(client, ref, dest)
+            if csv_filenames:
+                owner, name = ref.split("/", 1)
+                resp = api_get(
+                    client, f"{KAGGLE_API}/datasets/view/{owner}/{name}"
+                )
+                ds = resp.json() if resp.status_code == 200 else {}
+                write_folder_manifest(client, dest, ds, csv_filenames)
+                console.print(f"OK ({len(csv_filenames)} CSV)")
+            else:
+                console.print("[red]FAILED[/red]")
+
+
 def build_prompt(eval_def: dict, output_dir: Path, config: str) -> str:
     """Build the eval prompt for a single run."""
     template = PROMPT_TEMPLATE_PATH.read_text()
 
     if config == "with_skill":
-        preamble_path = EVALS2_DIR / "preamble-with-skill.md"
+        preamble_path = EVALS_DIR / "preamble-with-skill.md"
         skill_path = SKILL_DIR / "SKILL.md"
-        preamble = preamble_path.read_text().replace("{SKILL_PATH}", str(skill_path.resolve()))
+        preamble = preamble_path.read_text().replace(
+            "{SKILL_PATH}", str(skill_path.resolve())
+        )
     else:
-        preamble_path = EVALS2_DIR / "preamble-without-skill.md"
+        preamble_path = EVALS_DIR / "preamble-without-skill.md"
         preamble = preamble_path.read_text()
 
     task_prompt = eval_def["prompt"]
@@ -107,7 +164,9 @@ def delete_session_log(session_id: str) -> bool:
     return False
 
 
-async def _execute_claude(cmd: list[str], timeout: int, stdin_input: str | None = None) -> dict:
+async def _execute_claude(
+    cmd: list[str], timeout: int, stdin_input: str | None = None
+) -> dict:
     """Run a claude -p subprocess with timeout."""
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -119,7 +178,8 @@ async def _execute_claude(cmd: list[str], timeout: int, stdin_input: str | None 
     input_bytes = stdin_input.encode() if stdin_input else None
     try:
         stdout, stderr = await asyncio.wait_for(
-            proc.communicate(input=input_bytes), timeout=timeout,
+            proc.communicate(input=input_bytes),
+            timeout=timeout,
         )
     except asyncio.TimeoutError:
         timed_out = True
@@ -177,9 +237,9 @@ async def run_single(
         outputs_dir = run_dir / eval_name / config / "run-1" / "outputs"
         outputs_dir.mkdir(parents=True, exist_ok=True)
 
-        session_id = str(uuid.uuid5(
-            EVAL_NAMESPACE, f"{eval_name}-{config}-{run_dir.name}"
-        ))
+        session_id = str(
+            uuid.uuid5(EVAL_NAMESPACE, f"{eval_name}-{config}-{run_dir.name}")
+        )
 
         # Delete any stale session log so claude -p starts fresh
         # instead of resuming a previous (possibly broken) session.
@@ -188,11 +248,16 @@ async def run_single(
         prompt = build_prompt(eval_def, outputs_dir, config)
 
         cmd = [
-            "claude", "-p",
-            "--session-id", session_id,
-            "--output-format", "json",
-            "--max-turns", str(DEFAULT_MAX_TURNS),
-            "--tools", "Bash,Read,Write,Edit,Glob,Grep",
+            "claude",
+            "-p",
+            "--session-id",
+            session_id,
+            "--output-format",
+            "json",
+            "--max-turns",
+            str(DEFAULT_MAX_TURNS),
+            "--tools",
+            "Bash,Read,Write,Edit,Glob,Grep",
             "--verbose",
             "--dangerously-skip-permissions",
             "--strict-mcp-config",
@@ -346,14 +411,18 @@ def validate_single(eval_name: str, config: str, run_dir: Path) -> dict:
     # Step 1: dh exec verification
     try:
         exec_result = subprocess.run(
-            ["dh", "exec", "--vm", "--no-show-tables", str(script_path), "--timeout", "120"],
-            capture_output=True, text=True, timeout=180,
+            ["dh", "exec", "--no-show-tables", str(script_path), "--timeout", "120"],
+            capture_output=True,
+            text=True,
+            timeout=180,
         )
         validation["exec_success"] = exec_result.returncode == 0
         validation["exec_exit_code"] = exec_result.returncode
         if exec_result.returncode != 0:
             validation["exec_stderr"] = exec_result.stderr[:1000]
-            validation["errors"].append(f"dh exec failed (exit {exec_result.returncode})")
+            validation["errors"].append(
+                f"dh exec failed (exit {exec_result.returncode})"
+            )
         # Save output (dh exec combines stdout/stderr)
         output = exec_result.stdout or exec_result.stderr or ""
         (outputs_dir / "exec-result.txt").write_text(output[:4000])
@@ -363,8 +432,18 @@ def validate_single(eval_name: str, config: str, run_dir: Path) -> dict:
     # Step 2: dh render snapshot
     try:
         snap_result = subprocess.run(
-            ["dh", "render", str(script_path), *widget_args, "snapshot", "--timeout", "30000"],
-            capture_output=True, text=True, timeout=60,
+            [
+                "dh",
+                "render",
+                str(script_path),
+                *widget_args,
+                "snapshot",
+                "--timeout",
+                "30000",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         validation["render_success"] = snap_result.returncode == 0
         validation["render_exit_code"] = snap_result.returncode
@@ -378,10 +457,6 @@ def validate_single(eval_name: str, config: str, run_dir: Path) -> dict:
             validation["errors"].append(f"dh render snapshot failed: {err}")
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         validation["errors"].append(f"dh render snapshot error: {e}")
-
-
-
-
 
     # Save validation results
     (outputs_dir / "validation.json").write_text(json.dumps(validation, indent=2))
@@ -413,7 +488,10 @@ def extract_token_usage(raw_jsonl: Path) -> dict:
         "output_tokens": output_tokens,
         "cache_creation_tokens": cache_creation_tokens,
         "cache_read_tokens": cache_read_tokens,
-        "total_tokens": input_tokens + output_tokens + cache_creation_tokens + cache_read_tokens,
+        "total_tokens": input_tokens
+        + output_tokens
+        + cache_creation_tokens
+        + cache_read_tokens,
         "num_turns": num_turns,
     }
 
@@ -435,8 +513,12 @@ def parse_logs(run_dir: Path, eval_names: list[str] | None = None):
                 continue
             parse_items.append((eval_dir, config, run_1_dir, outputs_dir, raw_jsonl))
 
-    for i, (eval_dir, config, run_1_dir, outputs_dir, raw_jsonl) in enumerate(parse_items, 1):
-        console.print(f"  [dim][{i}/{len(parse_items)}][/dim] Parsing {eval_dir.name} [{config}]...")
+    for i, (eval_dir, config, run_1_dir, outputs_dir, raw_jsonl) in enumerate(
+        parse_items, 1
+    ):
+        console.print(
+            f"  [dim][{i}/{len(parse_items)}][/dim] Parsing {eval_dir.name} [{config}]..."
+        )
         parse_session_log(raw_jsonl, outputs_dir)
 
         # Update timing.json with actual token counts
@@ -452,25 +534,32 @@ def ensure_vm_pool(size: int = 2):
     try:
         status = subprocess.run(
             ["dh", "vm", "pool", "status"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if "not running" in status.stdout.lower():
             console.print(f"[cyan]Starting VM pool (size={size})...[/cyan]")
             # Pool start can take a while on first cold boot
             result = subprocess.run(
                 ["dh", "vm", "pool", "start", "-n", str(size)],
-                capture_output=True, text=True, timeout=180,
+                capture_output=True,
+                text=True,
+                timeout=180,
             )
             if result.returncode == 0:
                 console.print(f"[cyan]VM pool started (size={size})[/cyan]")
             else:
-                console.print(f"[yellow]VM pool start returned {result.returncode}[/yellow]")
+                console.print(
+                    f"[yellow]VM pool start returned {result.returncode}[/yellow]"
+                )
         elif status.returncode == 0:
             # Pool is running — scale to desired size
             console.print(f"[cyan]VM pool already running, scaling to {size}...[/cyan]")
             subprocess.run(
                 ["dh", "vm", "pool", "scale", str(size)],
-                capture_output=True, timeout=10,
+                capture_output=True,
+                timeout=10,
             )
             console.print(f"[cyan]VM pool ready[/cyan]")
         else:
@@ -489,7 +578,7 @@ async def stage_run(
     timeout: int,
 ) -> list[dict]:
     """Run evals via claude -p."""
-    run_dir = EVALS2_RUNS_DIR / run_id
+    run_dir = EVALS_RUNS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # Ensure VM pool is warm for dh exec inside claude -p sessions.
@@ -520,9 +609,7 @@ async def stage_run(
                 run_dir / eval_def["name"] / config / "run-1" / "eval-result.json"
             )
             if skip_existing and result_path.exists():
-                console.print(
-                    f"  [dim]Skipping {eval_def['name']} [{config}][/dim]"
-                )
+                console.print(f"  [dim]Skipping {eval_def['name']} [{config}][/dim]")
                 continue
             pending.append((eval_def, config))
 
@@ -531,18 +618,25 @@ async def stage_run(
     total = len(pending)
 
     for eval_def, config in pending:
-        tasks.append(run_single(
-            eval_def, config, run_dir, model, semaphore, timeout,
-            progress=progress, total=total,
-        ))
+        tasks.append(
+            run_single(
+                eval_def,
+                config,
+                run_dir,
+                model,
+                semaphore,
+                timeout,
+                progress=progress,
+                total=total,
+            )
+        )
 
     if not tasks:
         console.print("[yellow]No evals to run (all skipped)[/yellow]")
         return []
 
     console.print(
-        f"\n[bold]Stage: run[/bold] — {len(tasks)} eval runs "
-        f"(parallel={parallel})\n"
+        f"\n[bold]Stage: run[/bold] — {len(tasks)} eval runs (parallel={parallel})\n"
     )
     results = await asyncio.gather(*tasks)
 
@@ -560,7 +654,7 @@ async def stage_run(
 
 def stage_validate(run_id: str, eval_names: list[str] | None = None):
     """Run dh render validation on completed runs."""
-    run_dir = EVALS2_RUNS_DIR / run_id
+    run_dir = EVALS_RUNS_DIR / run_id
     if not run_dir.exists():
         console.print(f"[red]Run directory not found: {run_dir}[/red]")
         sys.exit(1)
@@ -580,7 +674,9 @@ def stage_validate(run_id: str, eval_names: list[str] | None = None):
 
     results = []
     for i, (eval_dir, config) in enumerate(validate_items, 1):
-        console.print(f"  [dim][{i}/{len(validate_items)}][/dim] Validating {eval_dir.name} [{config}]...")
+        console.print(
+            f"  [dim][{i}/{len(validate_items)}][/dim] Validating {eval_dir.name} [{config}]..."
+        )
         v = validate_single(eval_dir.name, config, run_dir)
         results.append(v)
         status = "[green]OK[/green]" if v["render_success"] else "[red]FAIL[/red]"
@@ -616,23 +712,30 @@ def generate_run_id() -> str:
 def main():
     parser = argparse.ArgumentParser(description="Evals2 pipeline orchestrator")
     parser.add_argument(
-        "--evals", nargs="*", type=int,
+        "--evals",
+        nargs="*",
+        type=int,
         help="Specific eval IDs to run (default: all)",
     )
     parser.add_argument(
-        "--config", choices=["with_skill", "without_skill", "both"],
-        default="both", help="Which configuration(s) to run",
+        "--config",
+        choices=["with_skill", "without_skill", "both"],
+        default="both",
+        help="Which configuration(s) to run",
     )
     parser.add_argument("--parallel", type=int, default=DEFAULT_PARALLEL)
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument(
-        "--stage", choices=["run", "validate", "parse", "grade", "aggregate", "viewer", "all"],
+        "--stage",
+        choices=["run", "validate", "parse", "grade", "aggregate", "viewer", "all"],
         default="all",
     )
     parser.add_argument("--model", help="Model override (e.g., sonnet, opus)")
     parser.add_argument("--run-id", help="Run ID (auto-generated if not specified)")
     parser.add_argument(
-        "--timeout", type=int, default=DEFAULT_TIMEOUT,
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT,
         help=f"Timeout per claude -p attempt in seconds (default: {DEFAULT_TIMEOUT})",
     )
 
@@ -643,6 +746,9 @@ def main():
         console.print("[red]No evals found[/red]")
         sys.exit(1)
 
+    # Ensure all required datasets are downloaded before running
+    ensure_eval_datasets(evals)
+
     configs = CONFIGS if args.config == "both" else [args.config]
     run_id = args.run_id or generate_run_id()
 
@@ -652,10 +758,17 @@ def main():
     console.print(f"[bold]Stage:[/bold] {args.stage}")
 
     if args.stage in ("run", "all"):
-        results = asyncio.run(stage_run(
-            evals, run_id, configs, args.parallel, args.model,
-            args.skip_existing, args.timeout,
-        ))
+        results = asyncio.run(
+            stage_run(
+                evals,
+                run_id,
+                configs,
+                args.parallel,
+                args.model,
+                args.skip_existing,
+                args.timeout,
+            )
+        )
         if results:
             print_results_table(results)
 
@@ -667,13 +780,14 @@ def main():
     if args.stage in ("parse", "all"):
         console.print("\n[bold]Stage: parse[/bold]")
         eval_names = [e["name"] for e in evals] if args.evals else None
-        parse_logs(EVALS2_RUNS_DIR / run_id, eval_names)
+        parse_logs(EVALS_RUNS_DIR / run_id, eval_names)
 
     if args.stage in ("grade", "all"):
         console.print("\n[bold]Stage: grade[/bold]")
-        from evals2.grade import grade_run, load_evals_map
+        from evals.grade import grade_run, load_evals_map
+
         evals_map = load_evals_map()
-        run_dir = EVALS2_RUNS_DIR / run_id
+        run_dir = EVALS_RUNS_DIR / run_id
         # Collect items to grade for accurate counting
         grade_items = []
         for eval_dir in sorted(run_dir.iterdir()):
@@ -693,33 +807,49 @@ def main():
         for i, (eval_dir, config, eval_def) in enumerate(grade_items, 1):
             grading = grade_run(eval_dir.name, config, run_dir, eval_def)
             s = grading["summary"]
-            status = "[green]" if s["pass_rate"] >= 0.8 else "[yellow]" if s["pass_rate"] >= 0.5 else "[red]"
-            console.print(f"  [dim][{i}/{len(grade_items)}][/dim] {status}{eval_dir.name}[/] [{config}]: {s['passed']}/{s['total']} ({s['pass_rate']:.0%})")
+            status = (
+                "[green]"
+                if s["pass_rate"] >= 0.8
+                else "[yellow]"
+                if s["pass_rate"] >= 0.5
+                else "[red]"
+            )
+            console.print(
+                f"  [dim][{i}/{len(grade_items)}][/dim] {status}{eval_dir.name}[/] [{config}]: {s['passed']}/{s['total']} ({s['pass_rate']:.0%})"
+            )
 
     if args.stage in ("aggregate", "all"):
         console.print("\n[bold]Stage: aggregate[/bold]")
-        from evals2.aggregate import main as aggregate_main
-        sys.argv = ["aggregate-evals2", "--run-id", run_id]
+        from evals.aggregate import main as aggregate_main
+
+        sys.argv = ["aggregate-evals", "--run-id", run_id]
         aggregate_main()
 
     if args.stage in ("viewer", "all"):
-        run_dir = EVALS2_RUNS_DIR / run_id
+        run_dir = EVALS_RUNS_DIR / run_id
         benchmark_path = run_dir / "benchmark.json"
         review_path = run_dir / "review.html"
         if benchmark_path.exists():
             console.print("\n[bold]Stage: viewer[/bold]")
-            viewer_script = EVALS2_DIR / "generate_review.py"
-            subprocess.run([
-                sys.executable, str(viewer_script),
-                str(run_dir),
-                "--skill-name", "deephaven-core-query-writing",
-                "--benchmark", str(benchmark_path),
-                "--static", str(review_path),
-            ], check=False)
+            viewer_script = EVALS_DIR / "generate_review.py"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(viewer_script),
+                    str(run_dir),
+                    "--skill-name",
+                    "deephaven-core-query-writing",
+                    "--benchmark",
+                    str(benchmark_path),
+                    "--static",
+                    str(review_path),
+                ],
+                check=False,
+            )
             if review_path.exists():
                 console.print(f"  [green]Review:[/green] {review_path}")
 
-    run_dir = EVALS2_RUNS_DIR / run_id
+    run_dir = EVALS_RUNS_DIR / run_id
     console.print(f"\n[bold green]Done.[/bold green] Results in: {run_dir}")
 
 

@@ -49,8 +49,8 @@ node_modules/
 tools/dist/
 
 # Eval data (downloaded datasets and run output)
-tools/evals/
-tools/evals2/runs/
+tools/evals/data/
+tools/evals/runs/
 
 # Local agent/tool config
 .agents/

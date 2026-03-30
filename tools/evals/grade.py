@@ -5,8 +5,8 @@ parsing raw LLM text as JSON, the agent writes grading.json directly via the
 Write tool — guaranteeing valid JSON output.
 
 Usage:
-    uv run grade-evals2 --run-id test-001
-    uv run grade-evals2 --run-id test-001 --evals 11
+    uv run grade-evals --run-id test-001
+    uv run grade-evals --run-id test-001 --evals 11
 """
 
 from __future__ import annotations
@@ -21,9 +21,9 @@ from rich.console import Console
 
 console = Console()
 
-EVALS2_DIR = Path(__file__).resolve().parent
-EVALS_JSON_PATH = EVALS2_DIR / "evals.json"
-EVALS2_RUNS_DIR = EVALS2_DIR / "runs"
+EVALS_DIR = Path(__file__).resolve().parent
+EVALS_JSON_PATH = EVALS_DIR / "evals.json"
+EVALS_RUNS_DIR = EVALS_DIR / "runs"
 CONFIGS = ["with_skill", "without_skill"]
 
 GRADER_PROMPT = """\
@@ -202,12 +202,12 @@ def _fallback_grading(expectations: list[str]) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Grade evals2 runs")
+    parser = argparse.ArgumentParser(description="Grade eval runs")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--evals", nargs="*", type=int, help="Specific eval IDs")
     args = parser.parse_args()
 
-    run_dir = EVALS2_RUNS_DIR / args.run_id
+    run_dir = EVALS_RUNS_DIR / args.run_id
     if not run_dir.exists():
         console.print(f"[red]Run not found: {run_dir}[/red]")
         sys.exit(1)

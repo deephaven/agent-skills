@@ -1,9 +1,9 @@
-# Evals2 Design
+# Evals Design
 
 ## Architecture Overview
 
 ```
-evals2/
+evals/
 ├── notes/                    # Research and design docs (this folder)
 ├── data/                     # Symlink or reference to ../evals/data/
 ├── runs/                     # Run output directories

@@ -1,10 +1,10 @@
 """Aggregate grading results into benchmark.json.
 
 Produces benchmark.json and benchmark.md compatible with skill-creator's
-eval-viewer. Reads grading.json files from the evals2 run directory layout.
+eval-viewer. Reads grading.json files from the evals run directory layout.
 
 Usage:
-    uv run aggregate-evals2 --run-id test-001
+    uv run aggregate-evals --run-id test-001
 """
 
 from __future__ import annotations
@@ -20,9 +20,9 @@ from rich.console import Console
 
 console = Console()
 
-EVALS2_DIR = Path(__file__).resolve().parent
-EVALS2_RUNS_DIR = EVALS2_DIR / "runs"
-EVALS_JSON_PATH = EVALS2_DIR / "evals.json"
+EVALS_DIR = Path(__file__).resolve().parent
+EVALS_RUNS_DIR = EVALS_DIR / "runs"
+EVALS_JSON_PATH = EVALS_DIR / "evals.json"
 CONFIGS = ["with_skill", "without_skill"]
 
 
@@ -45,11 +45,11 @@ def calculate_stats(values: list[float]) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Aggregate evals2 results")
+    parser = argparse.ArgumentParser(description="Aggregate eval results")
     parser.add_argument("--run-id", required=True)
     args = parser.parse_args()
 
-    run_dir = EVALS2_RUNS_DIR / args.run_id
+    run_dir = EVALS_RUNS_DIR / args.run_id
     if not run_dir.exists():
         console.print(f"[red]Run not found: {run_dir}[/red]")
         sys.exit(1)
@@ -136,7 +136,7 @@ def main():
     benchmark = {
         "metadata": {
             "skill_name": "deephaven-core-query-writing",
-            "skill_path": str(EVALS2_DIR.parent.parent / "skills" / "deephaven-core-query-writing"),
+            "skill_path": str(EVALS_DIR.parent.parent / "skills" / "deephaven-core-query-writing"),
             "executor_model": run_config.get("model", "default"),
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "evals_run": sorted(set(r["eval_id"] for r in runs)),

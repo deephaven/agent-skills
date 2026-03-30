@@ -126,9 +126,9 @@ CLI tool for running Python code with Deephaven real-time data capabilities, onl
 
 ## Evals
 
-The eval pipeline measures how well agents write Deephaven dashboards with and without the skill loaded. Each eval runs as a single `claude -p` session that handles all phases (write → verify → test → fix → reflect). LLM-driven skill recommendations replace heuristic analysis.
+The eval pipeline measures how well agents write Deephaven dashboards with and without the skill loaded. Each eval runs as a single `claude -p` session that handles all phases (write → verify → reflect). Required datasets are downloaded automatically before runs begin.
 
-Requires: `claude` CLI on PATH, `dh` CLI for Playwright testing.
+Requires: `claude` CLI on PATH, `dh` CLI for script verification.
 
 ```bash
 cd tools
@@ -139,27 +139,28 @@ uv run download-eval-data
 uv run download-eval-data -n 20               # download top 20 instead of 10
 uv run download-eval-data --refresh-manifests  # regenerate manifests for existing datasets
 
-# Full pipeline: run evals → parse logs → analyze → aggregate recommendations
+# Full pipeline: run evals → validate → parse → grade → aggregate → viewer
 uv run run-evals
 
-# Run with skill loaded (agent reads SKILL.md itself)
-uv run run-evals --with-skills
+# Only with-skill or without-skill
+uv run run-evals --config with_skill
+uv run run-evals --config without_skill
 
 # Individual stages against an existing run
+uv run run-evals --stage validate --run-id 20260305-162133
 uv run run-evals --stage parse --run-id 20260305-162133
-uv run run-evals --stage analyze --run-id 20260305-162133
+uv run run-evals --stage grade --run-id 20260305-162133
 uv run run-evals --stage aggregate --run-id 20260305-162133
 
 # Options
 uv run run-evals --parallel 5                 # concurrency (default: 3)
 uv run run-evals --model sonnet               # model override
-uv run run-evals --datasets ds1 ds2           # specific datasets only
-uv run run-evals --count 10                   # run on the first N evals (default: all)
+uv run run-evals --evals 1 2 3                # specific eval IDs
 uv run run-evals --skip-existing              # resume interrupted run
-uv run run-evals --max-fix-iterations 5       # fix loop iterations (default: 3)
 
-# Compare two runs (e.g. no-skill vs with-skill)
-uv run analyze-evals --run-id run-a --compare run-b
+# Grade and aggregate standalone
+uv run grade-evals --run-id 20260305-162133
+uv run aggregate-evals --run-id 20260305-162133
 
 # Parse a single session log
 uv run parse-session path/to/raw.jsonl
@@ -171,18 +172,23 @@ Output is written to `tools/evals/runs/{RUN_ID}/`:
 
 ```
 run-config.json              # run metadata
-aggregate-metrics.json       # cross-eval token/cost/tool aggregation
-failure-modes.md             # error rankings with affected evals
-eval-results.md              # per-dataset summary table
-skill-recommendations.md     # LLM-generated aggregate recommendations (aggregate stage)
+benchmark.json               # aggregate scores (skill-creator format)
+benchmark.md                 # summary table
+review.html                  # self-contained review page
 {DATASET}/
-  eval-result.json           # per-eval result from claude -p
-  no-skill-script.py         # generated dashboard script
-  raw.jsonl                  # single session log (all phases)
-  transcript.md              # human-readable conversation
-  metrics.json               # token usage, tool metrics, errors
-  playwright-test.py         # generated Playwright test
-  playwright-results.json    # structured test results
-  screenshots/               # per-interaction screenshots
-  skill-recommendations.md   # per-eval LLM reflection (brief)
+  eval_metadata.json         # eval definition snapshot
+  {CONFIG}/run-1/
+    eval-result.json         # per-eval result from claude -p
+    eval_metadata.json       # eval definition snapshot
+    timing.json              # token usage and duration
+    grading.json             # expectation-level pass/fail
+    outputs/
+      script.py              # generated dashboard script
+      raw.jsonl              # session log
+      transcript.md          # human-readable conversation
+      metrics.json           # token usage, tool metrics
+      exec-result.txt        # dh exec output
+      render-result.txt      # dh render snapshot
+      validation.json        # structured exec/render results
+      skill-recommendations.md  # per-eval reflection
 ```
