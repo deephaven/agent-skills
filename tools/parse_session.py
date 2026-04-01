@@ -257,6 +257,9 @@ def extract_metrics(events: list[dict], eval_name: str) -> dict:
     # Script attempt tracking
     dh_exec_attempts: list[dict] = []
 
+    # Track seen assistant message IDs to deduplicate streaming chunks
+    seen_assistant_msg_ids: set[str] = set()
+
     # File read tracking — which files did the agent read?
     files_read: list[dict] = []
 
@@ -347,8 +350,16 @@ def extract_metrics(events: list[dict], eval_name: str) -> dict:
                                 })
 
         elif event_type == "assistant":
-            total_turns += 1
             msg = event.get("message", {})
+            msg_id = msg.get("id", "")
+            is_new_call = True
+            if msg_id:
+                if msg_id in seen_assistant_msg_ids:
+                    is_new_call = False
+                else:
+                    seen_assistant_msg_ids.add(msg_id)
+            if is_new_call:
+                total_turns += 1
             content = msg.get("content", [])
             usage = msg.get("usage", {})
 

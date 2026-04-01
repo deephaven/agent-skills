@@ -151,6 +151,7 @@ uv run run-evals --stage validate --run-id 20260305-162133
 uv run run-evals --stage parse --run-id 20260305-162133
 uv run run-evals --stage grade --run-id 20260305-162133
 uv run run-evals --stage aggregate --run-id 20260305-162133
+uv run run-evals --stage summarize --run-id 20260305-162133
 
 # Options
 uv run run-evals --parallel 5                 # concurrency (default: 3)

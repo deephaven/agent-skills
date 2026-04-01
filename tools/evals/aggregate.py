@@ -86,6 +86,7 @@ def main():
                 "total": grading["summary"]["total"],
                 "time_seconds": timing.get("total_duration_seconds", 0),
                 "tokens": timing.get("total_tokens", 0),
+                "num_turns": timing.get("num_turns", 0),
                 "tool_calls": 0,
                 "errors": grading["summary"].get("failed", 0),
             }
@@ -138,6 +139,7 @@ def main():
             "skill_name": "deephaven-core-query-writing",
             "skill_path": str(EVALS_DIR.parent.parent / "skills" / "deephaven-core-query-writing"),
             "executor_model": run_config.get("model", "default"),
+            "effort": run_config.get("effort", "default"),
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "evals_run": sorted(set(r["eval_id"] for r in runs)),
             "runs_per_configuration": 1,
@@ -156,6 +158,7 @@ def main():
         f"**Run ID:** {args.run_id}",
         f"**Date:** {datetime.now().strftime('%Y-%m-%d')}",
         f"**Model:** {run_config.get('model', 'default')}",
+        f"**Effort:** {run_config.get('effort', 'default')}",
         "",
     ]
 

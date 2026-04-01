@@ -223,6 +223,7 @@ async def run_single(
     config: str,
     run_dir: Path,
     model: str | None,
+    effort: str | None,
     semaphore: asyncio.Semaphore,
     timeout: int = DEFAULT_TIMEOUT,
     progress: list[int] | None = None,
@@ -266,6 +267,8 @@ async def run_single(
             cmd.append("--disable-slash-commands")
         if model:
             cmd.extend(["--model", model])
+        if effort:
+            cmd.extend(["--effort", effort])
 
         # Increment shared progress counter
         if progress is not None:
@@ -464,24 +467,46 @@ def validate_single(eval_name: str, config: str, run_dir: Path) -> dict:
 
 
 def extract_token_usage(raw_jsonl: Path) -> dict:
-    """Sum token usage from assistant events in a session log."""
-    input_tokens = 0
-    output_tokens = 0
-    cache_creation_tokens = 0
-    cache_read_tokens = 0
-    num_turns = 0
+    """Sum token usage from assistant events in a session log.
+
+    Assistant events with the same message ID are streaming chunks of one API
+    call.  We deduplicate by message ID and keep the last usage block per call
+    (which carries the final token counts).
+    """
+    # Deduplicate by message ID — keep last usage per API call
+    api_calls: dict[str, dict] = {}  # msg_id -> last usage dict
+    user_turns = 0
+    seen_assistant_ids: set[str] = set()
+    assistant_turns = 0
 
     with open(raw_jsonl) as f:
         for line in f:
             event = json.loads(line)
-            if event.get("type") != "assistant":
-                continue
-            num_turns += 1
-            usage = event.get("message", {}).get("usage", {})
-            input_tokens += usage.get("input_tokens", 0)
-            output_tokens += usage.get("output_tokens", 0)
-            cache_creation_tokens += usage.get("cache_creation_input_tokens", 0)
-            cache_read_tokens += usage.get("cache_read_input_tokens", 0)
+            etype = event.get("type")
+            if etype == "user":
+                user_turns += 1
+            elif etype == "assistant":
+                msg_id = event.get("message", {}).get("id", "")
+                usage = event.get("message", {}).get("usage", {})
+                if msg_id:
+                    if msg_id not in seen_assistant_ids:
+                        seen_assistant_ids.add(msg_id)
+                        assistant_turns += 1
+                    api_calls[msg_id] = usage
+                else:
+                    api_calls[id(usage)] = usage
+                    assistant_turns += 1
+
+    input_tokens = 0
+    output_tokens = 0
+    cache_creation_tokens = 0
+    cache_read_tokens = 0
+
+    for usage in api_calls.values():
+        input_tokens += usage.get("input_tokens", 0)
+        output_tokens += usage.get("output_tokens", 0)
+        cache_creation_tokens += usage.get("cache_creation_input_tokens", 0)
+        cache_read_tokens += usage.get("cache_read_input_tokens", 0)
 
     return {
         "input_tokens": input_tokens,
@@ -492,7 +517,7 @@ def extract_token_usage(raw_jsonl: Path) -> dict:
         + output_tokens
         + cache_creation_tokens
         + cache_read_tokens,
-        "num_turns": num_turns,
+        "num_turns": user_turns + assistant_turns,
     }
 
 
@@ -574,6 +599,7 @@ async def stage_run(
     configs: list[str],
     parallel: int,
     model: str | None,
+    effort: str | None,
     skip_existing: bool,
     timeout: int,
 ) -> list[dict]:
@@ -590,6 +616,7 @@ async def stage_run(
         "run_id": run_id,
         "start_time": datetime.now(timezone.utc).isoformat(),
         "model": model or "default",
+        "effort": effort or "default",
         "configs": configs,
         "parallel": parallel,
         "timeout": timeout,
@@ -624,6 +651,7 @@ async def stage_run(
                 config,
                 run_dir,
                 model,
+                effort,
                 semaphore,
                 timeout,
                 progress=progress,
@@ -709,8 +737,95 @@ def generate_run_id() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
+SUMMARIZE_PROMPT = """\
+You are analyzing eval reflections from AI agents that wrote Deephaven dashboard scripts.
+
+Below are the skill-recommendations.md files from {count} evals run **{config_label}**.
+Each reflects on errors encountered, fixes applied, and skill gaps.
+
+Produce a concise summary (markdown) with these sections:
+
+## Common Errors
+List the most frequent error patterns across evals. Group similar errors together.
+For each, note how many evals hit it and give a representative error message.
+
+## Common Skill Gaps
+What documentation or examples were most frequently missing or unclear?
+Rank by how many evals mentioned the gap.
+
+## Key Metrics
+- Evals analyzed: N
+- Average dh exec/render retry count (if reported)
+- Most common root cause category (API misuse, import errors, data handling, etc.)
+
+Be specific and quantitative. Do NOT include generic advice.
+
+---
+
+{reflections}
+"""
+
+
+def stage_summarize(
+    run_dir: Path, benchmark_path: Path, configs: list[str]
+) -> None:
+    """Summarize skill-recommendations across configs using Sonnet."""
+    benchmark = json.loads(benchmark_path.read_text())
+
+    summaries: dict[str, str] = {}
+    for config in configs:
+        # Collect all skill-recommendations.md for this config
+        reflections: list[str] = []
+        for eval_dir in sorted(run_dir.iterdir()):
+            if not eval_dir.is_dir() or eval_dir.name.startswith("."):
+                continue
+            rec_path = (
+                eval_dir / config / "run-1" / "outputs" / "skill-recommendations.md"
+            )
+            if rec_path.exists():
+                text = rec_path.read_text(errors="replace").strip()
+                if text:
+                    reflections.append(
+                        f"### {eval_dir.name}\n\n{text}"
+                    )
+
+        if not reflections:
+            console.print(f"  [dim]{config}:[/dim] no recommendations found")
+            continue
+
+        config_label = config.replace("_", " ")
+        prompt = SUMMARIZE_PROMPT.format(
+            count=len(reflections),
+            config_label=config_label,
+            reflections="\n\n---\n\n".join(reflections),
+        )
+
+        console.print(
+            f"  [dim]{config}:[/dim] summarizing {len(reflections)} recommendations..."
+        )
+        result = subprocess.run(
+            ["claude", "-p", "--model", "sonnet", "--output-format", "text"],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            summaries[config] = result.stdout.strip()
+            console.print(f"  [green]{config}:[/green] summary generated")
+        else:
+            console.print(
+                f"  [red]{config}:[/red] summarization failed (exit {result.returncode})"
+            )
+
+    if summaries:
+        benchmark["recommendation_summaries"] = summaries
+        benchmark_path.write_text(json.dumps(benchmark, indent=2))
+        console.print(f"  [green]Updated:[/green] {benchmark_path}")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Evals2 pipeline orchestrator")
+    parser = argparse.ArgumentParser(description="Evals pipeline orchestrator")
     parser.add_argument(
         "--evals",
         nargs="*",
@@ -727,10 +842,15 @@ def main():
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument(
         "--stage",
-        choices=["run", "validate", "parse", "grade", "aggregate", "viewer", "all"],
+        choices=["run", "validate", "parse", "grade", "aggregate", "summarize", "viewer", "all"],
         default="all",
     )
     parser.add_argument("--model", help="Model override (e.g., sonnet, opus)")
+    parser.add_argument(
+        "--effort",
+        choices=["low", "medium", "high", "max"],
+        help="Thinking effort level for claude -p",
+    )
     parser.add_argument("--run-id", help="Run ID (auto-generated if not specified)")
     parser.add_argument(
         "--timeout",
@@ -765,6 +885,7 @@ def main():
                 configs,
                 args.parallel,
                 args.model,
+                args.effort,
                 args.skip_existing,
                 args.timeout,
             )
@@ -824,6 +945,13 @@ def main():
 
         sys.argv = ["aggregate-evals", "--run-id", run_id]
         aggregate_main()
+
+    if args.stage in ("summarize", "all"):
+        run_dir = EVALS_RUNS_DIR / run_id
+        benchmark_path = run_dir / "benchmark.json"
+        if benchmark_path.exists():
+            console.print("\n[bold]Stage: summarize[/bold]")
+            stage_summarize(run_dir, benchmark_path, configs)
 
     if args.stage in ("viewer", "all"):
         run_dir = EVALS_RUNS_DIR / run_id

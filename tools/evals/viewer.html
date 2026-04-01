@@ -12,8 +12,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-  <!-- snarkdown: inline markdown parser (~1.9KB, MIT, github.com/developit/snarkdown) -->
-  <script>!function(e,n){"object"==typeof exports&&"undefined"!=typeof module?module.exports=n():"function"==typeof define&&define.amd?define(n):(e=e||self).snarkdown=n()}(this,function(){var e={"":["<em>","</em>"],_:["<strong>","</strong>"],"*":["<strong>","</strong>"],"~":["<s>","</s>"],"\n":["<br />"]," ":["<br />"],"-":["<hr />"]};function n(e){return e.replace(RegExp("^"+(e.match(/^(\t| )+/)||"")[0],"gm"),"")}function r(e){return(e+"").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}return function t(o,a){var c,s,l,g,u,p=/((?:^|\n+)(?:\n---+|\* \*(?: \*)+)\n)|(?:^``` *(\w*)\n([\s\S]*?)\n```$)|((?:(?:^|\n+)(?:\t|  {2,}).+)+\n*)|((?:(?:^|\n)([>*+-]|\d+\.)\s+.*)+)|(?:!\[([^\]]*?)\]\(([^)]+?)\))|(\[)|(\](?:\(([^)]+?)\))?)|(?:(?:^|\n+)([^\s].*)\n(-{3,}|={3,})(?:\n+|$))|(?:(?:^|\n+)(#{1,6})\s*(.+)(?:\n+|$))|(?:`([^`].*?)`)|(  \n\n*|\n{2,}|__|\*\*|[_*]|~~)/gm,f=[],i="",d=a||{},m=0;function h(n){var r=e[n[1]||""],t=f[f.length-1]==n;return r?r[1]?(t?f.pop():f.push(n),r[0|t]):r[0]:n}function $(){for(var e="";f.length;)e+=h(f[f.length-1]);return e}for(o=o.replace(/^\[(.+?)\]:\s*(.+)$/gm,function(e,n,r){return d[n.toLowerCase()]=r,""}).replace(/^\n+|\n+$/g,"");l=p.exec(o);)s=o.substring(m,l.index),m=p.lastIndex,c=l[0],s.match(/[^\\](\\\\)*\\$/)||((u=l[3]||l[4])?c='<pre class="code '+(l[4]?"poetry":l[2].toLowerCase())+'"><code'+(l[2]?' class="language-'+l[2].toLowerCase()+'"':"")+">"+n(r(u).replace(/^\n+|\n+$/g,""))+"</code></pre>":(u=l[6])?(u.match(/\./)&&(l[5]=l[5].replace(/^\d+/gm,"")),g=t(n(l[5].replace(/^\s*[>*+.-]/gm,""))),">"==u?u="blockquote":(u=u.match(/\./)?"ol":"ul",g=g.replace(/^(.*)(\n|$)/gm,"<li>$1</li>")),c="<"+u+">"+g+"</"+u+">"):l[8]?c='<img src="'+r(l[8])+'" alt="'+r(l[7])+'">':l[10]?(i=i.replace("<a>",'<a href="'+r(l[11]||d[s.toLowerCase()])+'">'),c=$()+"</a>"):l[9]?c="<a>":l[12]||l[14]?c="<"+(u="h"+(l[14]?l[14].length:l[13]>"="?1:2))+">"+t(l[12]||l[15],d)+"</"+u+">":l[16]?c="<code>"+r(l[16])+"</code>":(l[17]||l[1])&&(c=h(l[17]||"--"))),i+=s,i+=c;return(i+o.substring(m)+$()).replace(/^\n+|\n+$/g,"")}});</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
   <style>
     :root {
       --bg: #faf9f5;
@@ -123,21 +122,66 @@
       flex-shrink: 0;
       gap: 1rem;
     }
-    .eval-title-row .eval-title {
-      flex: 1;
-    }
     .eval-title {
       font-family: 'Poppins', sans-serif;
       font-size: 1.1rem;
       font-weight: 600;
       color: var(--text);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .eval-progress {
+    .eval-nav-counter {
       font-family: 'Poppins', sans-serif;
       font-size: 0.8125rem;
       color: var(--text-muted);
       white-space: nowrap;
+      flex-shrink: 0;
     }
+    /* ---- Eval navigator (right-aligned) ---- */
+    .eval-nav {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .eval-nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 1rem;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .eval-nav-btn:hover:not(:disabled) { background: var(--bg); }
+    .eval-nav-btn:disabled { opacity: 0.25; cursor: default; }
+    .eval-nav-btn svg { width: 16px; height: 16px; }
+    .eval-nav select {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.8125rem;
+      padding: 0.375rem 0.5rem;
+      border: none;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      min-width: 260px;
+      height: 2.25rem;
+      outline: none;
+    }
+    .eval-nav select:focus { background: var(--bg); }
 
     /* ---- Config badge ---- */
     .config-badge {
@@ -408,54 +452,33 @@
     }
     .rendered-markdown strong { font-weight: 600; }
     .rendered-markdown hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+    .rendered-markdown table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0.5rem 0;
+      font-size: 0.8rem;
+    }
+    .rendered-markdown th, .rendered-markdown td {
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.6rem;
+      text-align: left;
+    }
+    .rendered-markdown th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .rendered-markdown tr:nth-child(even) td { background: var(--bg); }
+    .rendered-markdown blockquote {
+      border-left: 3px solid var(--border);
+      margin: 0.5rem 0;
+      padding: 0.25rem 0.75rem;
+      color: var(--text-muted);
+    }
     .empty-state {
       color: var(--text-muted);
       font-style: italic;
       padding: 2rem;
       text-align: center;
-    }
-
-    /* ---- Feedback ---- */
-    .prev-feedback {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0.625rem 0.75rem;
-      margin-top: 0.75rem;
-      font-size: 0.8125rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-    .prev-feedback-label {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 0.25rem;
-      color: var(--text-muted);
-    }
-    .feedback-textarea {
-      width: 100%;
-      min-height: 100px;
-      padding: 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 0.9375rem;
-      line-height: 1.5;
-      resize: vertical;
-      color: var(--text);
-    }
-    .feedback-textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-    .feedback-status {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.5rem;
-      min-height: 1.1em;
     }
 
     /* ---- Grades (non-collapsed) ---- */
@@ -542,27 +565,27 @@
       margin-bottom: 1.5rem;
     }
     .benchmark-table th, .benchmark-table td {
-      padding: 0.625rem 0.75rem;
+      padding: 0.5rem 0.75rem;
       text-align: left;
       border: 1px solid var(--border);
     }
     .benchmark-table th {
       font-family: 'Poppins', sans-serif;
-      background: var(--header-bg);
-      color: var(--header-text);
+      background: var(--bg);
+      color: var(--text);
       font-weight: 500;
-      font-size: 0.75rem;
+      font-size: 0.6875rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
     .benchmark-table tr:hover { background: var(--bg); }
-    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
-    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
-    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
-    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(25, 118, 210, 0.04); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(245, 127, 23, 0.04); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(25, 118, 210, 0.08); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(245, 127, 23, 0.08); }
     .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
-    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
-    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(25, 118, 210, 0.08); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(245, 127, 23, 0.08); }
     .benchmark-delta-positive { color: var(--green); font-weight: 600; }
     .benchmark-delta-negative { color: var(--red); font-weight: 600; }
     .benchmark-notes {
@@ -591,131 +614,158 @@
       text-align: center;
       padding: 3rem;
     }
+    .benchmark-meta {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.8125rem;
+    }
+    .benchmark-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+    .benchmark-meta-label {
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .benchmark-meta-value {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .benchmark-table th.group-with {
+      background: rgba(25, 118, 210, 0.10);
+      color: #1976d2;
+      text-align: center;
+      font-size: 0.75rem;
+      letter-spacing: 0.03em;
+      border-bottom: 2px solid rgba(25, 118, 210, 0.3);
+    }
+    .benchmark-table th.group-without {
+      background: rgba(245, 127, 23, 0.08);
+      color: #e65100;
+      text-align: center;
+      font-size: 0.75rem;
+      letter-spacing: 0.03em;
+      border-bottom: 2px solid rgba(245, 127, 23, 0.3);
+    }
+    .benchmark-table th.sub-with {
+      background: rgba(25, 118, 210, 0.04);
+      color: var(--text-muted);
+      font-size: 0.625rem;
+      text-align: right;
+      padding: 0.375rem 0.625rem;
+    }
+    .benchmark-table th.sub-without {
+      background: rgba(245, 127, 23, 0.03);
+      color: var(--text-muted);
+      font-size: 0.625rem;
+      text-align: right;
+      padding: 0.375rem 0.625rem;
+    }
+    .benchmark-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.8125rem;
+    }
+    .benchmark-table td.num.muted {
+      color: var(--text);
+    }
+    .benchmark-table td.group-sep {
+      border-left: 2px solid var(--border);
+    }
+    .benchmark-table td.winner-with {
+      background: rgba(33, 150, 243, 0.12);
+    }
+    .benchmark-table td.winner-without {
+      background: rgba(255, 193, 7, 0.15);
+    }
+    .benchmark-overview-row {
+      cursor: pointer;
+      color: var(--text);
+    }
+    .benchmark-overview-row:hover td {
+      background: var(--border) !important;
+    }
+    .benchmark-overview-row:nth-child(even) td {
+      background: var(--bg);
+    }
+    .benchmark-overview-row:nth-child(even):hover td {
+      background: var(--border) !important;
+    }
+    .benchmark-overview-row td:first-child {
+      font-weight: 500;
+    }
+    .benchmark-overview-footer td {
+      background: var(--bg);
+      border-top: 2px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text);
+    }
     .benchmark-eval-divider {
       border: none;
       border-top: 2px solid var(--border);
       margin: 1.5rem 0;
     }
 
-    /* ---- Navigation ---- */
-    .nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 2rem;
-      border-top: 1px solid var(--border);
-      background: var(--surface);
-      flex-shrink: 0;
+    /* ---- Recommendation summary cards ---- */
+    .rec-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
     }
-    .nav-btn {
-      font-family: 'Poppins', sans-serif;
-      padding: 0.5rem 1.25rem;
+    @media (max-width: 768px) {
+      .rec-summary-grid { grid-template-columns: 1fr; }
+    }
+    .rec-summary-card {
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      background: var(--surface);
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text);
-      transition: all 0.15s;
+      padding: 1rem 1.25rem;
+      min-width: 0;
     }
-    .nav-btn:hover:not(:disabled) {
-      background: var(--bg);
-      border-color: var(--text-muted);
-    }
-    .nav-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .done-btn {
+    .rec-summary-grid > .rec-summary-card { margin-bottom: 0; }
+    .rec-card-with { border-top: 3px solid rgba(25,118,210,0.5); }
+    .rec-card-without { border-top: 3px solid rgba(245,127,23,0.5); }
+    .rec-summary-label {
       font-family: 'Poppins', sans-serif;
-      padding: 0.5rem 1.5rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: all 0.15s;
-    }
-    .done-btn:hover {
-      background: var(--bg);
-      border-color: var(--text-muted);
-    }
-    .done-btn.ready {
-      border: none;
-      background: var(--accent);
-      color: white;
       font-weight: 600;
-    }
-    .done-btn.ready:hover {
-      background: var(--accent-hover);
-    }
-    /* ---- Done overlay ---- */
-    .done-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 100;
-      justify-content: center;
-      align-items: center;
-    }
-    .done-overlay.visible {
-      display: flex;
-    }
-    .done-card {
-      background: var(--surface);
-      border-radius: 12px;
-      padding: 2rem 3rem;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      max-width: 500px;
-    }
-    .done-card h2 {
-      font-size: 1.5rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
       margin-bottom: 0.5rem;
     }
-    .done-card p {
-      color: var(--text-muted);
-      margin-bottom: 1.5rem;
-      line-height: 1.5;
+    .rec-summary-body {
+      font-size: 0.8rem;
+      line-height: 1.55;
+      color: var(--text);
     }
-    .done-card .btn-row {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
+    .rec-summary-body h2 {
+      font-size: 0.85rem;
+      margin: 0.75rem 0 0.35rem;
+      color: var(--text);
     }
-    .done-card button {
-      padding: 0.5rem 1.25rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      cursor: pointer;
-      font-size: 0.875rem;
+    .rec-summary-body h3 {
+      font-size: 0.8rem;
+      margin: 0.5rem 0 0.25rem;
+      color: var(--text);
     }
-    .done-card button:hover {
+    .rec-summary-body ul { padding-left: 1.25rem; margin: 0.25rem 0; }
+    .rec-summary-body li { margin-bottom: 0.2rem; }
+    .rec-summary-body code {
+      font-size: 0.75rem;
       background: var(--bg);
-    }
-    /* ---- Toast ---- */
-    .toast {
-      position: fixed;
-      bottom: 5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--header-bg);
-      color: var(--header-text);
-      padding: 0.625rem 1.25rem;
-      border-radius: var(--radius);
-      font-size: 0.875rem;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-      z-index: 200;
-    }
-    .toast.visible {
-      opacity: 1;
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
     }
 
     /* ---- Collapsible section ---- */
@@ -776,10 +826,10 @@
       text-align: center;
       flex-shrink: 0;
     }
-    .t-badge-user { background: rgba(33, 150, 243, 0.12); color: #1976d2; }
-    .t-badge-think { background: rgba(0,0,0,0.05); color: var(--text-muted); }
-    .t-badge-text { background: rgba(0,0,0,0.05); color: var(--text); }
-    .t-badge-tool { background: rgba(217, 119, 87, 0.12); color: var(--accent); }
+    .t-badge-user { background: rgba(33,150,243,0.14); color: #1565c0; }
+    .t-badge-think { background: rgba(156,39,176,0.12); color: #7b1fa2; }
+    .t-badge-text { background: rgba(0,150,136,0.14); color: #00695c; }
+    .t-badge-tool { }
     .t-badge-result { background: transparent; color: var(--text-muted); font-weight: 500; min-width: 3.25rem; border: 1px solid var(--border); }
 
     .t-time {
@@ -817,6 +867,14 @@
       letter-spacing: 0;
       margin-left: 0.5rem;
     }
+    .transcript-summary-bar {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      padding: 0.375rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
     .transcript-row[style*="cursor"] { position: relative; }
     .transcript-row[style*="cursor"]:hover { background: rgba(217, 119, 87, 0.04); }
     .transcript-row.expanded {
@@ -846,7 +904,6 @@
     <div class="header">
       <div>
         <h1>Eval Review: <span id="skill-name"></span></h1>
-        <div class="instructions">Review each output and leave feedback below.</div>
       </div>
     </div>
 
@@ -861,12 +918,6 @@
     <div class="main" id="outputs-main">
       <!-- Dynamic content rendered by JS -->
     </div>
-
-    <div class="nav" id="outputs-nav">
-      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
-      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
-      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
-    </div>
     </div><!-- end panel-outputs -->
 
     <!-- Benchmark panel (quantitative stats) -->
@@ -877,28 +928,13 @@
     </div>
   </div>
 
-  <!-- Done overlay -->
-  <div class="done-overlay" id="done-overlay">
-    <div class="done-card">
-      <h2>Review Complete</h2>
-      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
-      <div class="btn-row">
-        <button onclick="closeDoneDialog()">OK</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast -->
-  <div class="toast" id="toast"></div>
 
   <script>
     // ---- Embedded data (injected by generate_review.py) ----
     /*__EMBEDDED_DATA__*/
 
     // ---- State ----
-    let feedbackMap = {};  // run_id -> feedback text
     let currentEvalIndex = 0;
-    let visitedEvals = new Set();
     let evalGroups = [];  // [{eval_name, eval_id, prompt, runs: [{config, run}]}]
 
     // ---- Build eval groups from flat runs ----
@@ -906,11 +942,6 @@
       const runs = EMBEDDED_DATA.runs || [];
       const map = {};
       for (const run of runs) {
-        // Attach transcript to the raw.jsonl file object so renderFileContent can use it
-        if (run.transcript) {
-          const rawFile = (run.outputs || []).find(f => f.name === "raw.jsonl");
-          if (rawFile) rawFile._transcript = run.transcript;
-        }
         const key = run.eval_name || run.eval_id || run.id;
         if (!map[key]) {
           map[key] = {
@@ -928,27 +959,13 @@
     }
 
     // ---- Init ----
-    async function init() {
-      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
-        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
-      if (!hasPrevious) {
-        try {
-          const resp = await fetch("/api/feedback");
-          const data = await resp.json();
-          if (data.reviews) {
-            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
-          }
-        } catch { /* first run, no feedback yet */ }
-      }
-
+    function init() {
       document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
-
       buildEvalGroups();
       showEval(0);
     }
 
     function onSelectEval(val) {
-      saveAllFeedback();
       showEval(parseInt(val));
     }
 
@@ -956,14 +973,8 @@
     function navigate(delta) {
       const newIndex = currentEvalIndex + delta;
       if (newIndex >= 0 && newIndex < evalGroups.length) {
-        saveAllFeedback();
         showEval(newIndex);
       }
-    }
-
-    function updateNavButtons() {
-      document.getElementById("prev-btn").disabled = currentEvalIndex === 0;
-      document.getElementById("next-btn").disabled = currentEvalIndex === evalGroups.length - 1;
     }
 
     // ---- Show an eval group ----
@@ -974,19 +985,32 @@
       container.innerHTML = "";
 
 
-      // Eval title row: title ... N of N ... [select]
+      // Title row: [title] ... [N of N] [< dropdown >]
       const titleRow = document.createElement("div");
       titleRow.className = "eval-title-row";
+
       const titleDiv = document.createElement("div");
       titleDiv.className = "eval-title";
       titleDiv.textContent = group.eval_name.replace(/-/g, " ");
       titleRow.appendChild(titleDiv);
-      const progress = document.createElement("div");
-      progress.className = "eval-progress";
-      progress.textContent = (index + 1) + " of " + evalGroups.length;
-      titleRow.appendChild(progress);
+
+      const counter = document.createElement("span");
+      counter.className = "eval-nav-counter";
+      counter.textContent = (index + 1) + " of " + evalGroups.length;
+      titleRow.appendChild(counter);
+
+      const nav = document.createElement("div");
+      nav.className = "eval-nav";
+
+      const prevBtn = document.createElement("button");
+      prevBtn.className = "eval-nav-btn";
+      prevBtn.id = "prev-btn";
+      prevBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+      prevBtn.onclick = function() { navigate(-1); };
+      prevBtn.disabled = index === 0;
+      nav.appendChild(prevBtn);
+
       const select = document.createElement("select");
-      select.className = "eval-select";
       select.id = "eval-select";
       select.onchange = function() { onSelectEval(this.value); };
       for (let i = 0; i < evalGroups.length; i++) {
@@ -996,7 +1020,17 @@
         if (i === index) opt.selected = true;
         select.appendChild(opt);
       }
-      titleRow.appendChild(select);
+      nav.appendChild(select);
+
+      const nextBtn = document.createElement("button");
+      nextBtn.className = "eval-nav-btn";
+      nextBtn.id = "next-btn";
+      nextBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+      nextBtn.onclick = function() { navigate(1); };
+      nextBtn.disabled = index === evalGroups.length - 1;
+      nav.appendChild(nextBtn);
+
+      titleRow.appendChild(nav);
       container.appendChild(titleRow);
 
       // Prompt section
@@ -1060,33 +1094,6 @@
         for (const run of group.runs) {
           renderRunPane(container, run);
         }
-      }
-
-      // Feedback section
-      const fbSection = document.createElement("div");
-      fbSection.className = "section";
-      const fbRunId = group.runs[0].id;
-      fbSection.innerHTML =
-        '<div class="section-header">Your Feedback</div>' +
-        '<div class="section-body">' +
-        '<textarea class="feedback-textarea" id="feedback-' + escapeAttr(fbRunId) + '" ' +
-        'placeholder="What do you think of this output? Any issues, suggestions, or things that look great?" ' +
-        'oninput="debounceSave()"></textarea>' +
-        '<div class="feedback-status" id="feedback-status"></div>' +
-        '</div>';
-      container.appendChild(fbSection);
-
-      // Load existing feedback
-      const ta = fbSection.querySelector("textarea");
-      ta.value = feedbackMap[fbRunId] || "";
-
-      updateNavButtons();
-
-      // Track visited
-      visitedEvals.add(index);
-      const doneBtn = document.getElementById("done-btn");
-      if (visitedEvals.size >= evalGroups.length) {
-        doneBtn.classList.add("ready");
       }
 
       // Scroll to top
@@ -1231,98 +1238,190 @@
       container.appendChild(outputsSection);
     }
 
-    // ---- Transcript parser & renderer ----
-    function parseTranscript(md) {
-      if (!md) return [];
-      const turns = [];
-      const turnRe = /^## Turn (\d+) — (User|Assistant) \*\(\+(\d+)ms\)\*/gm;
-      const sections = [];
-      let m;
-      while ((m = turnRe.exec(md)) !== null) {
-        if (sections.length > 0) sections[sections.length - 1].body = md.substring(sections[sections.length - 1].s, m.index);
-        sections.push({ num: +m[1], role: m[2], ms: +m[3], s: m.index + m[0].length });
+    // ---- JSONL transcript parser & renderer ----
+    function decodeJsonlBase64(dataUri) {
+      if (!dataUri) return [];
+      var b64 = dataUri.split(",")[1];
+      if (!b64) return [];
+      var raw = atob(b64);
+      var bytes = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      var text = new TextDecoder().decode(bytes);
+      var events = [];
+      var lines = text.split("\n");
+      for (var j = 0; j < lines.length; j++) {
+        if (!lines[j].trim()) continue;
+        try { events.push(JSON.parse(lines[j])); } catch(e) {}
       }
-      if (sections.length > 0) sections[sections.length - 1].body = md.substring(sections[sections.length - 1].s);
+      return events;
+    }
 
-      for (const sec of sections) {
-        const b = sec.body || "";
-        if (sec.role === "User") {
-          const trMatch = b.match(/### Tool Result \*\(\+(\d+)ms\)\*\n\*\*Status:\*\* (\*\*ERROR\*\*|success)/);
-          if (trMatch) {
-            const outMatch = b.match(/\*\*Output:\*\*\n```\n?([\s\S]*?)```/);
-            const full = outMatch ? outMatch[1].trim() : "";
-            turns.push({ type: "result", ms: +trMatch[1], ok: !trMatch[2].includes("ERROR"),
-              preview: full.split("\n")[0].substring(0, 100), full: full });
+    function toolInputPreview(name, input) {
+      if (!input) return "";
+      if (name === "Read" || name === "Write") return (input.file_path || "").split("/").pop() || JSON.stringify(input).substring(0, 60);
+      if (name === "Bash") { var c = input.command || ""; return c.length > 80 ? c.substring(0, 77) + "..." : c; }
+      if (name === "Glob") return input.pattern || JSON.stringify(input).substring(0, 60);
+      if (name === "Grep") return input.pattern || JSON.stringify(input).substring(0, 60);
+      if (name === "Edit") return (input.file_path || "").split("/").pop() || JSON.stringify(input).substring(0, 60);
+      var s = JSON.stringify(input);
+      return s.length > 60 ? s.substring(0, 57) + "..." : s;
+    }
+
+    function jsonlToTurns(events) {
+      var turns = [];
+      var t0 = null;
+
+      // First pass: merge assistant events by message ID (progressive streaming chunks)
+      var merged = [];
+      var assistantById = {};  // msgId -> {blocks:[], usage:{}, ts, stopReason}
+
+      for (var i = 0; i < events.length; i++) {
+        var evt = events[i];
+        if (evt.type === "user") {
+          merged.push(evt);
+        } else if (evt.type === "assistant") {
+          var msgId = evt.message && evt.message.id;
+          if (msgId && assistantById[msgId]) {
+            // Merge: append new blocks, update usage/stop
+            var existing = assistantById[msgId];
+            var newBlocks = (evt.message && evt.message.content) || [];
+            for (var nb = 0; nb < newBlocks.length; nb++) existing.blocks.push(newBlocks[nb]);
+            if (evt.message && evt.message.usage) existing.usage = evt.message.usage;
+            if (evt.message && evt.message.stop_reason) existing.stopReason = evt.message.stop_reason;
           } else {
-            const text = b.replace(/^[\s\n]+/, "").replace(/\n\.\.\. \(\d+ chars total\)\s*$/, "").trim();
-            turns.push({ type: "user", ms: sec.ms, preview: text.split("\n")[0].substring(0, 120), full: text });
+            var entry = {
+              type: "assistant",
+              timestamp: evt.timestamp,
+              blocks: (evt.message && evt.message.content) ? evt.message.content.slice() : [],
+              usage: (evt.message && evt.message.usage) || {},
+              stopReason: evt.message && evt.message.stop_reason
+            };
+            if (msgId) assistantById[msgId] = entry;
+            merged.push(entry);
           }
-          continue;
         }
-        // Assistant — may have thinking, response, tool use, tool result sub-blocks
-        const thinkM = b.match(/### Thinking[^\n]*~(\d+) words?\)?\n([\s\S]*?)(?=\n###|\n\*Tokens:|$)/);
-        if (thinkM) {
-          const full = thinkM[2].trim();
-          turns.push({ type: "think", ms: sec.ms, words: +thinkM[1], preview: full.substring(0, 100), full: full });
-        }
-        const respM = b.match(/### Response\n([\s\S]*?)(?=\n###|\n\*Tokens:|$)/);
-        if (respM) {
-          const full = respM[1].trim();
-          turns.push({ type: "text", ms: sec.ms, preview: full.substring(0, 120), full: full, tok: parseTok(b) });
-        }
-        const toolRe = /### Tool Use: (\w+)\n\*\*Input:\*\* ([\s\S]*?)(?=\n###|\n\*Tokens:|$)/g;
-        let tm;
-        while ((tm = toolRe.exec(b)) !== null) {
-          const rawInput = tm[2].trim();
-          turns.push({ type: "tool", ms: sec.ms, name: tm[1], preview: toolTarget(tm[1], rawInput), full: rawInput, tok: parseTok(b) });
-        }
-        const trRe = /### Tool Result \*\(\+(\d+)ms\)\*\n\*\*Status:\*\* (\*\*ERROR\*\*|success)/g;
-        let tr;
-        while ((tr = trRe.exec(b)) !== null) {
-          const after = b.substring(tr.index + tr[0].length);
-          const outM = after.match(/\*\*Output:\*\*\n```\n?([\s\S]*?)```/);
-          const full = outM ? outM[1].trim() : "";
-          turns.push({ type: "result", ms: +tr[1], ok: !tr[2].includes("ERROR"),
-            preview: full.split("\n")[0].substring(0, 100), full: full });
-        }
-        if (!thinkM && !respM && !tm && !tr) {
-          const bare = b.replace(/^[\s\n]+/, "").replace(/\n\*Tokens:.*$/, "").trim();
-          if (bare) {
-            turns.push({ type: "text", ms: sec.ms, preview: bare.split("\n")[0].substring(0, 120), full: bare, tok: parseTok(b) });
+        // Skip queue-operation and other types
+      }
+
+      // Second pass: convert merged events to turns
+      for (var j = 0; j < merged.length; j++) {
+        var m = merged[j];
+        var ts = m.timestamp ? new Date(m.timestamp).getTime() : null;
+        if (ts && !t0) t0 = ts;
+        var ms = (ts && t0) ? ts - t0 : 0;
+
+        if (m.type === "user") {
+          var content = m.message && m.message.content;
+          if (Array.isArray(content)) {
+            for (var k = 0; k < content.length; k++) {
+              var block = content[k];
+              if (block.type === "tool_result") {
+                var full = typeof block.content === "string" ? block.content : JSON.stringify(block.content || "", null, 2);
+                turns.push({ type: "result", ms: ms, ok: !block.is_error,
+                  preview: full.split("\n")[0].substring(0, 100), full: full });
+              }
+            }
+          } else if (typeof content === "string") {
+            turns.push({ type: "user", ms: ms,
+              preview: content.split("\n")[0].substring(0, 120), full: content });
+          }
+        } else if (m.type === "assistant") {
+          var usage = m.usage || {};
+          var tok = (usage.input_tokens || usage.output_tokens) ? {
+            i: usage.input_tokens || 0,
+            o: usage.output_tokens || 0,
+            ci: usage.cache_read_input_tokens || 0
+          } : null;
+          var blocks = m.blocks || [];
+
+          for (var b = 0; b < blocks.length; b++) {
+            var bl = blocks[b];
+            if (bl.type === "thinking") {
+              var thinkText = bl.thinking || "";
+              var words = thinkText.split(/\s+/).filter(Boolean).length;
+              turns.push({ type: "think", ms: ms, words: words,
+                preview: thinkText.substring(0, 100), full: thinkText });
+            } else if (bl.type === "text") {
+              turns.push({ type: "text", ms: ms, tok: tok,
+                preview: (bl.text || "").substring(0, 120), full: bl.text || "" });
+            } else if (bl.type === "tool_use") {
+              var inputStr = JSON.stringify(bl.input, null, 2);
+              turns.push({ type: "tool", ms: ms, name: bl.name, tok: tok,
+                preview: toolInputPreview(bl.name, bl.input), full: inputStr });
+            }
           }
         }
       }
       return turns;
     }
 
-    function parseTok(t) {
-      const m = t.match(/\*Tokens: in=(\d+), out=(\d+)\*/);
-      return m ? { i: +m[1], o: +m[2] } : null;
-    }
-
-    function toolTarget(name, input) {
-      try {
-        const clean = input.replace(/\n\.\.\. \(\d+ chars total\)$/, "");
-        const obj = JSON.parse(clean);
-        if (name === "Read" || name === "Write") return (obj.file_path || "").split("/").pop() || input.substring(0, 60);
-        if (name === "Bash") { const c = obj.command || ""; return c.length > 80 ? c.substring(0, 77) + "..." : c; }
-        if (name === "Glob") return obj.pattern || input.substring(0, 60);
-        if (name === "Grep") return obj.pattern || input.substring(0, 60);
-        return input.substring(0, 60);
-      } catch { return input.substring(0, 60).replace(/\n/g, " "); }
+    // Per-tool-name badge colors — well-known tools get hand-picked colors,
+    // everything else gets a deterministic hue from the name hash.
+    var _toolColorMap = {
+      Read:   { bg: "rgba(21,101,192,0.12)",  fg: "#1565c0" },   // blue
+      Write:  { bg: "rgba(46,125,50,0.14)",   fg: "#2e7d32" },   // green
+      Edit:   { bg: "rgba(230,81,0,0.12)",    fg: "#e65100" },   // orange
+      Bash:   { bg: "rgba(183,28,28,0.12)",   fg: "#b71c1c" },   // red
+      Grep:   { bg: "rgba(106,27,154,0.12)",  fg: "#6a1b9a" },   // deep purple
+      Glob:   { bg: "rgba(74,20,140,0.10)",   fg: "#4a148c" },   // indigo
+      Skill:  { bg: "rgba(255,143,0,0.14)",   fg: "#bf360c" },   // deep orange
+      Agent:  { bg: "rgba(0,105,92,0.14)",    fg: "#00695c" },   // teal
+    };
+    var _toolColorCache = {};
+    function toolColor(name) {
+      if (_toolColorMap[name]) return _toolColorMap[name];
+      if (_toolColorCache[name]) return _toolColorCache[name];
+      // Deterministic hue from name
+      var hash = 0;
+      for (var i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+      var hue = ((hash % 360) + 360) % 360;
+      _toolColorCache[name] = {
+        bg: "hsla(" + hue + ",50%,50%,0.12)",
+        fg: "hsl(" + hue + ",55%,35%)"
+      };
+      return _toolColorCache[name];
     }
 
     function fmtTime(ms) {
-      return ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s";
+      if (ms < 1000) return ms + "ms";
+      if (ms < 60000) return (ms / 1000).toFixed(1) + "s";
+      var m = Math.floor(ms / 60000);
+      var s = Math.round((ms % 60000) / 1000);
+      return m + "m " + s + "s";
     }
 
-    function buildTranscriptInline(md) {
-      if (!md) return null;
-      const turns = parseTranscript(md);
-      if (turns.length === 0) return null;
+    function buildTranscriptFromTurns(turns) {
+      if (!turns || turns.length === 0) return null;
 
       const wrap = document.createElement("div");
       wrap.className = "transcript-scroll";
+
+      // Summary header: total tokens, turns, duration
+      var totalIn = 0, totalOut = 0, totalCache = 0, apiCalls = 0;
+      var maxMs = 0;
+      var seenTok = new Set();
+      for (var s = 0; s < turns.length; s++) {
+        if (turns[s].ms > maxMs) maxMs = turns[s].ms;
+        if (turns[s].tok && !seenTok.has(turns[s].tok)) {
+          seenTok.add(turns[s].tok);
+          totalIn += turns[s].tok.i;
+          totalOut += turns[s].tok.o;
+          totalCache += turns[s].tok.ci || 0;
+          apiCalls++;
+        }
+      }
+      if (apiCalls > 0) {
+        var summary = document.createElement("div");
+        summary.className = "transcript-summary-bar";
+        var parts = [];
+        parts.push(apiCalls + " API call" + (apiCalls !== 1 ? "s" : ""));
+        parts.push(fmtNum(totalIn) + " in");
+        parts.push(fmtNum(totalOut) + " out");
+        if (totalCache > 0) parts.push(fmtNum(totalCache) + " cached");
+        if (maxMs > 0) parts.push(fmtTime(maxMs) + " elapsed");
+        summary.textContent = parts.join(" \u00b7 ");
+        wrap.appendChild(summary);
+      }
 
       for (const t of turns) {
         const row = document.createElement("div");
@@ -1334,7 +1433,13 @@
         if (t.type === "user") { badge.textContent = "USER"; badge.classList.add("t-badge-user"); }
         else if (t.type === "think") { badge.textContent = "THINK"; badge.classList.add("t-badge-think"); }
         else if (t.type === "text") { badge.textContent = "TEXT"; badge.classList.add("t-badge-text"); }
-        else if (t.type === "tool") { badge.textContent = t.name || "TOOL"; badge.classList.add("t-badge-tool"); }
+        else if (t.type === "tool") {
+          badge.textContent = t.name || "TOOL";
+          badge.classList.add("t-badge-tool");
+          var tc = toolColor(t.name || "TOOL");
+          badge.style.background = tc.bg;
+          badge.style.color = tc.fg;
+        }
         else if (t.type === "result") { badge.textContent = "RESULT"; badge.classList.add("t-badge-result"); }
         row.appendChild(badge);
 
@@ -1363,7 +1468,9 @@
         if (t.tok) {
           const tok = document.createElement("span");
           tok.className = "t-tokens";
-          tok.textContent = "in:" + fmtNum(t.tok.i) + " out:" + fmtNum(t.tok.o);
+          var label = "in:" + fmtNum(t.tok.i) + " out:" + fmtNum(t.tok.o);
+          if (t.tok.ci) label += " cache:" + fmtNum(t.tok.ci);
+          tok.textContent = label;
           row.appendChild(tok);
         }
 
@@ -1589,7 +1696,7 @@
         if (file.name.endsWith(".md")) {
           const div = document.createElement("div");
           div.className = "rendered-markdown";
-          div.innerHTML = snarkdown(file.content);
+          div.innerHTML = marked.parse(file.content);
           // Highlight any code blocks inside the rendered markdown
           div.querySelectorAll("pre code").forEach(block => hljs.highlightElement(block));
           content.appendChild(div);
@@ -1617,9 +1724,11 @@
         content.appendChild(iframe);
       } else if (file.type === "xlsx") {
         renderXlsx(content, file.data_b64);
-      } else if (file.type === "binary" && file._transcript) {
-        // raw.jsonl with transcript: render transcript viewer + download link
-        const txEl = buildTranscriptInline(file._transcript);
+      } else if (file.type === "binary" && file.name === "raw.jsonl") {
+        // raw.jsonl: decode base64, parse JSONL events, render transcript viewer
+        var events = decodeJsonlBase64(file.data_uri);
+        var turns = jsonlToTurns(events);
+        var txEl = buildTranscriptFromTurns(turns);
         if (txEl) content.appendChild(txEl);
         const a = document.createElement("a");
         a.className = "download-link";
@@ -1671,95 +1780,9 @@
       }
     }
 
-    // ---- Feedback ----
-    let saveTimeout = null;
-    function debounceSave() {
-      clearTimeout(saveTimeout);
-      document.getElementById("feedback-status").textContent = "";
-      saveTimeout = setTimeout(() => saveAllFeedback(), 800);
-    }
-
-    function saveAllFeedback() {
-      // Save current textarea
-      const group = evalGroups[currentEvalIndex];
-      if (!group) return;
-      const runId = group.runs[0].id;
-      const ta = document.querySelector("#outputs-main textarea");
-      if (ta) {
-        const text = ta.value;
-        if (text.trim() === "") {
-          delete feedbackMap[runId];
-        } else {
-          feedbackMap[runId] = text;
-        }
-      }
-
-      // Build reviews array
-      const reviews = [];
-      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
-        if (feedback.trim()) {
-          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
-        }
-      }
-
-      fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reviews, status: "in_progress" }),
-      }).then(() => {
-        const el = document.getElementById("feedback-status");
-        if (el) el.textContent = "Saved";
-      }).catch(() => {
-        const el = document.getElementById("feedback-status");
-        if (el) el.textContent = "Will download on submit";
-      });
-    }
-
-    // ---- Done ----
-    function showDoneDialog() {
-      saveAllFeedback();
-
-      const reviews = [];
-      const ts = new Date().toISOString();
-      for (const g of evalGroups) {
-        const runId = g.runs[0].id;
-        reviews.push({ run_id: runId, feedback: feedbackMap[runId] || "", timestamp: ts });
-      }
-      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
-      fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-      }).then(() => {
-        document.getElementById("done-overlay").classList.add("visible");
-      }).catch(() => {
-        const blob = new Blob([payload], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "feedback.json";
-        a.click();
-        URL.revokeObjectURL(url);
-        document.getElementById("done-overlay").classList.add("visible");
-      });
-    }
-
-    function closeDoneDialog() {
-      saveAllFeedback();
-      document.getElementById("done-overlay").classList.remove("visible");
-    }
-
-    // ---- Toast ----
-    function showToast(message) {
-      const toast = document.getElementById("toast");
-      toast.textContent = message;
-      toast.classList.add("visible");
-      setTimeout(() => toast.classList.remove("visible"), 2000);
-    }
-
     // ---- Keyboard nav ----
     document.addEventListener("keydown", (e) => {
-      if (e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+      if (e.target.tagName === "SELECT") return;
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
         e.preventDefault();
         navigate(-1);
@@ -1788,10 +1811,6 @@
       return div.innerHTML;
     }
 
-    function escapeAttr(text) {
-      return text.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-    }
-
     // ---- View switching ----
     function switchView(view) {
       document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
@@ -1808,77 +1827,172 @@
       document.getElementById("view-tabs").style.display = "flex";
 
       const container = document.getElementById("benchmark-content");
-      const summary = data.run_summary || {};
+      const runSummary = data.run_summary || {};
       const metadata = data.metadata || {};
       const notes = data.notes || [];
 
       let html = "";
 
       // Header
-      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
-      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
-      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
-      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
-      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
-      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
-      html += "</p>";
-
-      // Summary table
-      html += '<table class="benchmark-table">';
-
-      function fmtStat(stat, pct) {
-        if (!stat) return "&mdash;";
-        const suffix = pct ? "%" : "";
-        const m = pct ? (stat.mean * 100).toFixed(0) : fmtNum(parseFloat(stat.mean.toFixed(1)));
-        const s = pct ? (stat.stddev * 100).toFixed(0) : fmtNum(parseFloat(stat.stddev.toFixed(1)));
-        return m + suffix + " &plusmn; " + s + suffix;
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 1rem;'>Benchmark Results</h2>";
+      html += '<div class="benchmark-meta">';
+      if (metadata.executor_model) {
+        html += '<div class="benchmark-meta-item"><span class="benchmark-meta-label">Model</span><span class="benchmark-meta-value">' + escapeHtml(metadata.executor_model) + '</span></div>';
       }
-
-      function deltaClass(val) {
-        if (!val) return "";
-        const n = parseFloat(val);
-        if (n > 0) return "benchmark-delta-positive";
-        if (n < 0) return "benchmark-delta-negative";
-        return "";
+      if (metadata.effort) {
+        html += '<div class="benchmark-meta-item"><span class="benchmark-meta-label">Effort</span><span class="benchmark-meta-value">' + escapeHtml(metadata.effort) + '</span></div>';
       }
-
-      const configs = Object.keys(summary).filter(k => k !== "delta");
-      const configA = configs[0] || "config_a";
-      const configB = configs[1] || "config_b";
-      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      const a = summary[configA] || {};
-      const b = summary[configB] || {};
-      const delta = summary.delta || {};
-
-      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
-      html += "<tbody>";
-
-      html += "<tr><td><strong>Pass Rate</strong></td>";
-      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
-      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
-      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "&mdash;") + "</td></tr>";
-
-      if (a.time_seconds || b.time_seconds) {
-        html += "<tr><td><strong>Time (s)</strong></td>";
-        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
-        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
-        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "&mdash;") + "</td></tr>";
+      if (metadata.evals_run) {
+        html += '<div class="benchmark-meta-item"><span class="benchmark-meta-label">Evals</span><span class="benchmark-meta-value">' + metadata.evals_run.length + '</span></div>';
       }
-
-      if (a.tokens || b.tokens) {
-        html += "<tr><td><strong>Tokens</strong></td>";
-        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
-        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
-        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens ? fmtNum(parseFloat(delta.tokens)) : "&mdash;") + "</td></tr>";
+      html += '<div class="benchmark-meta-item"><span class="benchmark-meta-label">Runs / Config</span><span class="benchmark-meta-value">' + (metadata.runs_per_configuration || "?") + '</span></div>';
+      if (metadata.timestamp) {
+        html += '<div class="benchmark-meta-item"><span class="benchmark-meta-label">Date</span><span class="benchmark-meta-value">' + escapeHtml(metadata.timestamp) + '</span></div>';
       }
-
-      html += "</tbody></table>";
+      if (metadata.skill_name) {
+        html += '<div class="benchmark-meta-item"><span class="benchmark-meta-label">Skill</span><span class="benchmark-meta-value">' + escapeHtml(metadata.skill_name) + '</span></div>';
+      }
+      html += '</div>';
 
       // Per-eval breakdown
       const runs = data.runs || [];
       if (runs.length > 0) {
         const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        // Overview table — one row per eval, clickable to outputs view
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Overview</h3>";
+        html += '<table class="benchmark-table" style="table-layout:auto;">';
+        html += "<thead>";
+        html += '<tr><th rowspan="2" style="vertical-align:bottom;">Eval</th>';
+        html += '<th colspan="4" class="group-with">With Skill</th>';
+        html += '<th colspan="4" class="group-without">Without Skill</th></tr>';
+        html += "<tr>";
+        html += '<th class="sub-with">Pass</th><th class="sub-with">Time</th><th class="sub-with">Tokens</th><th class="sub-with">Turns</th>';
+        html += '<th class="sub-without group-sep">Pass</th><th class="sub-without">Time</th><th class="sub-without">Tokens</th><th class="sub-without">Turns</th>';
+        html += "</tr></thead><tbody>";
+
+        // Build a map from eval_name to evalGroups index for navigation
+        const evalGroupIndex = {};
+        for (let i = 0; i < evalGroups.length; i++) {
+          evalGroupIndex[evalGroups[i].eval_name] = i;
+        }
+
+        function compactTokens(n) {
+          if (!n) return "&mdash;";
+          if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+          if (n >= 1000) return (n / 1000).toFixed(0) + "K";
+          return String(n);
+        }
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+          const groupIdx = evalGroupIndex[evalName];
+          const clickAttr = groupIdx != null ? ' onclick="switchView(\'outputs\'); showEval(' + groupIdx + ');"' : '';
+          const wRun = evalRuns.find(r => r.configuration === "with_skill");
+          const woRun = evalRuns.find(r => r.configuration === "without_skill");
+          const wR = wRun ? wRun.result || {} : {};
+          const woR = woRun ? woRun.result || {} : {};
+
+          function fmtPass(r) {
+            if (r.pass_rate == null) return "&mdash;";
+            var pct = (r.pass_rate * 100).toFixed(0);
+            return "<strong>" + pct + "%</strong> <span style='opacity:.45;font-size:.75rem;'>" + (r.passed||0) + "/" + (r.total||0) + "</span>";
+          }
+          function fmtTime(r) { return r.time_seconds != null ? Math.round(r.time_seconds) + "s" : "&mdash;"; }
+          function fmtTurns(r) { return r.num_turns ? r.num_turns : "&mdash;"; }
+
+          // Compare each metric: higher is better for pass, lower is better for time/tokens/turns
+          function win(wVal, woVal, lowerIsBetter) {
+            if (wVal == null || woVal == null || wVal === woVal) return ["", ""];
+            var wBetter = lowerIsBetter ? wVal < woVal : wVal > woVal;
+            return wBetter ? [" winner-with", ""] : ["", " winner-without"];
+          }
+          var pr  = win(wR.pass_rate, woR.pass_rate, false);
+          var tm  = win(wR.time_seconds, woR.time_seconds, true);
+          var tok = win(wR.tokens, woR.tokens, true);
+          var tn  = win(wR.num_turns, woR.num_turns, true);
+
+          html += '<tr class="benchmark-overview-row"' + clickAttr + '>';
+          html += "<td>" + escapeHtml(evalName.replace(/-/g, " ")) + "</td>";
+          html += '<td class="num' + pr[0] + '">' + fmtPass(wR) + "</td>";
+          html += '<td class="num' + tm[0] + '">' + fmtTime(wR) + "</td>";
+          html += '<td class="num' + tok[0] + '">' + compactTokens(wR.tokens) + "</td>";
+          html += '<td class="num' + tn[0] + '">' + fmtTurns(wR) + "</td>";
+          html += '<td class="num group-sep' + pr[1] + '">' + fmtPass(woR) + "</td>";
+          html += '<td class="num' + tm[1] + '">' + fmtTime(woR) + "</td>";
+          html += '<td class="num' + tok[1] + '">' + compactTokens(woR.tokens) + "</td>";
+          html += '<td class="num' + tn[1] + '">' + fmtTurns(woR) + "</td>";
+          html += "</tr>";
+        }
+
+        // Averages / totals footer row
+        var wRuns = runs.filter(function(r) { return r.configuration === "with_skill" && r.result; });
+        var woRuns = runs.filter(function(r) { return r.configuration === "without_skill" && r.result; });
+        function tot(arr, key) {
+          var vals = arr.map(function(r) { return r.result[key]; }).filter(function(v) { return v != null; });
+          return vals.length ? vals.reduce(function(a, b) { return a + b; }, 0) : null;
+        }
+        function avg(arr, key) {
+          var vals = arr.map(function(r) { return r.result[key]; }).filter(function(v) { return v != null; });
+          return vals.length ? vals.reduce(function(a, b) { return a + b; }, 0) / vals.length : null;
+        }
+
+        var wS = runSummary.with_skill || {};
+        var woS = runSummary.without_skill || {};
+
+        function fmtStatPct(stat) {
+          if (!stat || stat.mean == null) return "&mdash;";
+          var m = (stat.mean * 100).toFixed(0);
+          var s = (stat.stddev * 100).toFixed(0);
+          return "<strong>" + m + "%</strong> <span style='opacity:.5;font-size:.65rem;'>&plusmn;" + s + "%</span>";
+        }
+        function fmtStatNum(stat, suffix) {
+          if (!stat || stat.mean == null) return "&mdash;";
+          var m = Math.round(stat.mean);
+          var s = Math.round(stat.stddev);
+          return m + (suffix||"") + " <span style='opacity:.5;font-size:.65rem;'>&plusmn;" + s + "</span>";
+        }
+
+        html += '<tfoot><tr class="benchmark-overview-footer">';
+        html += '<td><strong>Avg / Total</strong></td>';
+        html += '<td class="num">' + fmtStatPct(wS.pass_rate) + '</td>';
+        html += '<td class="num">' + fmtStatNum(wS.time_seconds, "s") + '</td>';
+        html += '<td class="num">' + compactTokens(tot(wRuns, "tokens")) + '</td>';
+        html += '<td class="num">' + (avg(wRuns, "num_turns") != null ? avg(wRuns, "num_turns").toFixed(1) : "&mdash;") + '</td>';
+        html += '<td class="num group-sep">' + fmtStatPct(woS.pass_rate) + '</td>';
+        html += '<td class="num">' + fmtStatNum(woS.time_seconds, "s") + '</td>';
+        html += '<td class="num">' + compactTokens(tot(woRuns, "tokens")) + '</td>';
+        html += '<td class="num">' + (avg(woRuns, "num_turns") != null ? avg(woRuns, "num_turns").toFixed(1) : "&mdash;") + '</td>';
+        html += '</tr></tfoot>';
+
+        html += "</table>";
+
+        // Recommendation summaries (generated by summarize stage)
+        var recSummaries = data.recommendation_summaries || {};
+        var recConfigs = Object.keys(recSummaries);
+        if (recConfigs.length > 0) {
+          html += "<h3 style='font-family: Poppins, sans-serif; margin: 1.5rem 0 0.75rem;'>Common Issues Summary</h3>";
+          if (recConfigs.length === 1) {
+            var label = recConfigs[0].replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+            html += '<div class="rec-summary-card">';
+            html += '<div class="rec-summary-label">' + escapeHtml(label) + '</div>';
+            html += '<div class="rec-summary-body rendered-markdown">' + marked.parse(recSummaries[recConfigs[0]]) + '</div>';
+            html += '</div>';
+          } else {
+            html += '<div class="rec-summary-grid">';
+            for (var ri = 0; ri < recConfigs.length; ri++) {
+              var rKey = recConfigs[ri];
+              var rLabel = rKey.replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+              var cardClass = rKey === "with_skill" ? "rec-card-with" : "rec-card-without";
+              html += '<div class="rec-summary-card ' + cardClass + '">';
+              html += '<div class="rec-summary-label">' + escapeHtml(rLabel) + '</div>';
+              html += '<div class="rec-summary-body rendered-markdown">' + marked.parse(recSummaries[rKey]) + '</div>';
+              html += '</div>';
+            }
+            html += '</div>';
+          }
+        }
 
         html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
 
@@ -1896,7 +2010,7 @@
           const evalRuns = runs.filter(r => r.eval_id === evalId);
           const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
 
-          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<h4 id="bench-eval-' + evalId + '" style="font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);">' + escapeHtml(evalName) + "</h4>";
           html += '<table class="benchmark-table">';
           html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
           if (hasTime) html += "<th>Time (s)</th>";
@@ -2008,8 +2122,9 @@
     }
 
     // ---- Start ----
-    init();
+    buildEvalGroups();
     renderBenchmark();
+    init();
   </script>
 </body>
 </html>

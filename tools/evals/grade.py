@@ -138,6 +138,7 @@ def grade_run(eval_name: str, config: str, run_dir: Path, eval_def: dict) -> dic
             [
                 "claude", "-p",
                 "--model", "haiku",
+                "--permission-mode", "acceptEdits",
                 "--allowedTools", "Read,Write,Glob",
                 "--max-turns", "10",
                 "--strict-mcp-config",
@@ -156,15 +157,50 @@ def grade_run(eval_name: str, config: str, run_dir: Path, eval_def: dict) -> dic
     except Exception as e:
         console.print(f"    [red]Agent error: {e}[/red]")
 
-    # Read grading.json written by the agent
-    if grading_path.exists():
+    # Read grading.json written by the agent — check expected path first,
+    # then outputs/ (agents sometimes write there instead)
+    grading = None
+    for candidate in [grading_path, outputs_dir / "grading.json"]:
+        if candidate.exists():
+            try:
+                grading = json.loads(candidate.read_text())
+                if candidate != grading_path:
+                    console.print(f"    [dim]Found grading at {candidate.relative_to(run_dir)} (moved)[/dim]")
+                break
+            except json.JSONDecodeError:
+                console.print(f"    [red]Invalid JSON: {candidate}[/red]")
+
+    if grading is None:
+        console.print(f"    [yellow]Agent did not write grading.json, retrying...[/yellow]")
         try:
-            grading = json.loads(grading_path.read_text())
-        except json.JSONDecodeError:
-            console.print(f"    [red]Agent wrote invalid JSON to {grading_path}[/red]")
-            grading = _fallback_grading(expectations)
-    else:
-        console.print(f"    [red]Agent did not write {grading_path}[/red]")
+            retry = subprocess.run(
+                [
+                    "claude", "-p",
+                    "--model", "haiku",
+                    "--allowedTools", "Read,Write,Glob",
+                    "--max-turns", "10",
+                    "--strict-mcp-config",
+                ],
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if retry.returncode != 0:
+                console.print(f"    [red]Retry failed: {retry.stderr[:200]}[/red]")
+        except (subprocess.TimeoutExpired, Exception) as e:
+            console.print(f"    [red]Retry error: {e}[/red]")
+
+        for candidate in [grading_path, outputs_dir / "grading.json"]:
+            if candidate.exists():
+                try:
+                    grading = json.loads(candidate.read_text())
+                    break
+                except json.JSONDecodeError:
+                    pass
+
+    if grading is None:
+        console.print(f"    [red]Agent failed after retry[/red]")
         grading = _fallback_grading(expectations)
 
     # Ensure summary is present and correct
@@ -186,8 +222,11 @@ def grade_run(eval_name: str, config: str, run_dir: Path, eval_def: dict) -> dic
         "total_duration_seconds": timing.get("total_duration_seconds", 0),
     }
 
-    # Re-write with normalized summary and timing
+    # Re-write to canonical path and clean up misplaced copy
     grading_path.write_text(json.dumps(grading, indent=2))
+    misplaced = outputs_dir / "grading.json"
+    if misplaced.exists() and misplaced != grading_path:
+        misplaced.unlink()
     return grading
 
 

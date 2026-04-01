@@ -174,15 +174,6 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
         except (json.JSONDecodeError, OSError):
             pass
 
-    # Load transcript if present
-    transcript_md = None
-    transcript_path = outputs_dir / "transcript.md"
-    if transcript_path.exists():
-        try:
-            transcript_md = transcript_path.read_text(errors="replace")
-        except OSError:
-            pass
-
     return {
         "id": run_id,
         "prompt": prompt,
@@ -193,7 +184,6 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
         "grading": grading,
         "metrics": metrics,
         "timing": timing,
-        "transcript": transcript_md,
     }
 
 
@@ -308,20 +298,15 @@ def generate_html(
     template_path = Path(__file__).parent / "viewer.html"
     template = template_path.read_text()
 
-    # Build previous_feedback and previous_outputs maps for the template
-    previous_feedback: dict[str, str] = {}
     previous_outputs: dict[str, list[dict]] = {}
     if previous:
         for run_id, data in previous.items():
-            if data.get("feedback"):
-                previous_feedback[run_id] = data["feedback"]
             if data.get("outputs"):
                 previous_outputs[run_id] = data["outputs"]
 
     embedded = {
         "skill_name": skill_name,
         "runs": runs,
-        "previous_feedback": previous_feedback,
         "previous_outputs": previous_outputs,
     }
     if benchmark:
@@ -357,7 +342,7 @@ def _kill_port(port: int) -> None:
         print("Note: lsof not found, cannot check if port is in use", file=sys.stderr)
 
 class ReviewHandler(BaseHTTPRequestHandler):
-    """Serves the review HTML and handles feedback saves.
+    """Serves the review HTML.
 
     Regenerates the HTML on each page load so that refreshing the browser
     picks up new eval outputs without restarting the server.
@@ -367,7 +352,6 @@ class ReviewHandler(BaseHTTPRequestHandler):
         self,
         workspace: Path,
         skill_name: str,
-        feedback_path: Path,
         previous: dict[str, dict],
         benchmark_path: Path | None,
         *args,
@@ -375,14 +359,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
     ):
         self.workspace = workspace
         self.skill_name = skill_name
-        self.feedback_path = feedback_path
         self.previous = previous
         self.benchmark_path = benchmark_path
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
         if self.path == "/" or self.path == "/index.html":
-            # Regenerate HTML on each request (re-scans workspace for new outputs)
             runs = find_runs(self.workspace)
             benchmark = None
             if self.benchmark_path and self.benchmark_path.exists():
@@ -397,41 +379,10 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(content)))
             self.end_headers()
             self.wfile.write(content)
-        elif self.path == "/api/feedback":
-            data = b"{}"
-            if self.feedback_path.exists():
-                data = self.feedback_path.read_bytes()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
-        else:
-            self.send_error(404)
-
-    def do_POST(self) -> None:
-        if self.path == "/api/feedback":
-            length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(length)
-            try:
-                data = json.loads(body)
-                if not isinstance(data, dict) or "reviews" not in data:
-                    raise ValueError("Expected JSON object with 'reviews' key")
-                self.feedback_path.write_text(json.dumps(data, indent=2) + "\n")
-                resp = b'{"ok":true}'
-                self.send_response(200)
-            except (json.JSONDecodeError, OSError, ValueError) as e:
-                resp = json.dumps({"error": str(e)}).encode()
-                self.send_response(500)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(resp)))
-            self.end_headers()
-            self.wfile.write(resp)
         else:
             self.send_error(404)
 
     def log_message(self, format: str, *args: object) -> None:
-        # Suppress request logging to keep terminal clean
         pass
 
 
@@ -465,7 +416,6 @@ def main() -> None:
         sys.exit(1)
 
     skill_name = args.skill_name or workspace.name.replace("-workspace", "")
-    feedback_path = workspace / "feedback.json"
 
     previous: dict[str, dict] = {}
     if args.previous_workspace:
@@ -489,7 +439,7 @@ def main() -> None:
     # Kill any existing process on the target port
     port = args.port
     _kill_port(port)
-    handler = partial(ReviewHandler, workspace, skill_name, feedback_path, previous, benchmark_path)
+    handler = partial(ReviewHandler, workspace, skill_name, previous, benchmark_path)
     try:
         server = HTTPServer(("127.0.0.1", port), handler)
     except OSError:
@@ -502,7 +452,6 @@ def main() -> None:
     print(f"  ─────────────────────────────────")
     print(f"  URL:       {url}")
     print(f"  Workspace: {workspace}")
-    print(f"  Feedback:  {feedback_path}")
     if previous:
         print(f"  Previous:  {args.previous_workspace} ({len(previous)} runs)")
     if benchmark_path:
