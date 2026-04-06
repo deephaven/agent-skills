@@ -36,47 +36,53 @@ plot = dx.line(table=my_table, x="Timestamp", y="Price", by="Sym")
 ## Available Plot Types
 
 ### Basic Charts
-| Function | Use Case | Docs |
-|----------|----------|------|
-| `dx.line` | Time series, trends | https://deephaven.io/core/plotly/docs/line.md |
-| `dx.scatter` | Correlations, clusters | https://deephaven.io/core/plotly/docs/scatter.md |
-| `dx.bar` | Category comparisons | https://deephaven.io/core/plotly/docs/bar.md |
-| `dx.histogram` | Distributions | https://deephaven.io/core/plotly/docs/histogram.md |
-| `dx.area` | Cumulative totals | https://deephaven.io/core/plotly/docs/area.md |
-| `dx.pie` | Proportions | https://deephaven.io/core/plotly/docs/pie.md |
+
+| Function       | Use Case               | Docs                                               |
+| -------------- | ---------------------- | -------------------------------------------------- |
+| `dx.line`      | Time series, trends    | https://deephaven.io/core/plotly/docs/line.md      |
+| `dx.scatter`   | Correlations, clusters | https://deephaven.io/core/plotly/docs/scatter.md   |
+| `dx.bar`       | Category comparisons   | https://deephaven.io/core/plotly/docs/bar.md       |
+| `dx.histogram` | Distributions          | https://deephaven.io/core/plotly/docs/histogram.md |
+| `dx.area`      | Cumulative totals      | https://deephaven.io/core/plotly/docs/area.md      |
+| `dx.pie`       | Proportions            | https://deephaven.io/core/plotly/docs/pie.md       |
 
 ### Financial Charts
-| Function | Use Case | Docs |
-|----------|----------|------|
+
+| Function         | Use Case         | Docs                                                 |
+| ---------------- | ---------------- | ---------------------------------------------------- |
 | `dx.candlestick` | OHLC with bodies | https://deephaven.io/core/plotly/docs/candlestick.md |
-| `dx.ohlc` | OHLC with ticks | https://deephaven.io/core/plotly/docs/ohlc.md |
+| `dx.ohlc`        | OHLC with ticks  | https://deephaven.io/core/plotly/docs/ohlc.md        |
 
 ### Statistical Charts
-| Function | Use Case | Docs |
-|----------|----------|------|
-| `dx.box` | Distribution summary | https://deephaven.io/core/plotly/docs/box.md |
-| `dx.violin` | Full distribution shape | https://deephaven.io/core/plotly/docs/violin.md |
-| `dx.density_heatmap` | Joint distributions | https://deephaven.io/core/plotly/docs/density_heatmap.md |
-| `dx.strip` | Individual points | https://deephaven.io/core/plotly/docs/strip.md |
+
+| Function             | Use Case                | Docs                                                     |
+| -------------------- | ----------------------- | -------------------------------------------------------- |
+| `dx.box`             | Distribution summary    | https://deephaven.io/core/plotly/docs/box.md             |
+| `dx.violin`          | Full distribution shape | https://deephaven.io/core/plotly/docs/violin.md          |
+| `dx.density_heatmap` | Joint distributions     | https://deephaven.io/core/plotly/docs/density_heatmap.md |
+| `dx.strip`           | Individual points       | https://deephaven.io/core/plotly/docs/strip.md           |
 
 ### Hierarchical Charts
-| Function | Use Case | Docs |
-|----------|----------|------|
-| `dx.treemap` | Nested rectangles | https://deephaven.io/core/plotly/docs/treemap.md |
-| `dx.sunburst` | Radial hierarchy | https://deephaven.io/core/plotly/docs/sunburst.md |
-| `dx.icicle` | Hierarchical bars | https://deephaven.io/core/plotly/docs/icicle.md |
+
+| Function      | Use Case          | Docs                                              |
+| ------------- | ----------------- | ------------------------------------------------- |
+| `dx.treemap`  | Nested rectangles | https://deephaven.io/core/plotly/docs/treemap.md  |
+| `dx.sunburst` | Radial hierarchy  | https://deephaven.io/core/plotly/docs/sunburst.md |
+| `dx.icicle`   | Hierarchical bars | https://deephaven.io/core/plotly/docs/icicle.md   |
 
 ### 3D and Geo Charts
-| Function | Docs |
-|----------|------|
-| `dx.scatter_3d` | https://deephaven.io/core/plotly/docs/scatter-3d.md |
-| `dx.line_3d` | https://deephaven.io/core/plotly/docs/line-3d.md |
+
+| Function         | Docs                                                 |
+| ---------------- | ---------------------------------------------------- |
+| `dx.scatter_3d`  | https://deephaven.io/core/plotly/docs/scatter-3d.md  |
+| `dx.line_3d`     | https://deephaven.io/core/plotly/docs/line-3d.md     |
 | `dx.scatter_geo` | https://deephaven.io/core/plotly/docs/scatter-geo.md |
-| `dx.line_geo` | https://deephaven.io/core/plotly/docs/line-geo.md |
+| `dx.line_geo`    | https://deephaven.io/core/plotly/docs/line-geo.md    |
 
 ## Common Parameters
 
 ### Data Grouping
+
 ```python
 from deephaven.plot import express as dx
 
@@ -91,6 +97,7 @@ dx.scatter(table2, x="SepalLength", y="SepalWidth", by=["Species"])
 ```
 
 ### Visual Mapping
+
 ```python
 from deephaven.plot import express as dx
 
@@ -107,6 +114,7 @@ dx.scatter(
 ```
 
 ### Axis Configuration
+
 ```python
 from deephaven import empty_table
 from deephaven.plot import express as dx
@@ -128,6 +136,7 @@ dx.line(
 ```
 
 ### Titles and Labels
+
 ```python
 from deephaven.plot import express as dx
 
@@ -138,8 +147,6 @@ dx.line(
     x="Timestamp",
     y="Price",
     title="Stock Prices",
-    xaxis_titles="Time",
-    yaxis_titles="Price ($)",
 )
 ```
 
@@ -199,6 +206,7 @@ dx.ohlc(
 ## Advanced Features
 
 ### Subplots - Multiple Plots in Grid
+
 ```python
 from deephaven import empty_table
 from deephaven.plot import express as dx
@@ -230,6 +238,7 @@ combined = dx.make_subplots(
 ```
 
 ### Layer Plots - Stack Different Plot Types
+
 ```python
 import datetime
 
@@ -278,6 +287,7 @@ layered = dx.layer(
 ### Interactive Filtering
 
 **UI-driven filtering** (with deephaven.ui):
+
 ```python
 # Docs: https://deephaven.io/core/ui/docs/add-interactivity/plot-with-deephaven-ui.md
 from deephaven import ui
@@ -306,6 +316,7 @@ result = filtered_plot(stocks, "AAPL")
 ```
 
 **Partitioned table approach** (more efficient for repeated filtering):
+
 ```python
 from deephaven import ui
 from deephaven.plot import express as dx
@@ -333,6 +344,7 @@ result = partitioned_plot(stocks, "AAPL")
 ```
 
 **Dynamic plot type selection**:
+
 ```python
 from deephaven import ui
 from deephaven.plot import express as dx
@@ -373,6 +385,7 @@ result = dynamic_plot(stocks)
 **Note**: Deephaven Express handles liveness internally - no explicit scope management needed for plots.
 
 ### Multiple Axes
+
 ```python
 from deephaven import empty_table
 from deephaven.plot import express as dx
@@ -434,6 +447,7 @@ plot = dx.scatter(table, x="X", y="Y", unsafe_update_figure=customize)
 ### Common unsafe_update_figure Patterns
 
 **Add border to bars:**
+
 ```python
 from deephaven import new_table
 from deephaven.column import double_col, string_col
@@ -455,6 +469,7 @@ dx.bar(table, x="Category", y="Value", unsafe_update_figure=update)
 ```
 
 **Position legend:**
+
 ```python
 from deephaven import empty_table
 from deephaven.plot import express as dx
@@ -478,6 +493,7 @@ dx.line(table, x="X", y="Y", by="Category", unsafe_update_figure=update)
 ```
 
 **Hide legend:**
+
 ```python
 def update(fig):
     fig.update_layout(showlegend=False)
@@ -537,6 +553,7 @@ styled_plot = dx.scatter(source, x="Y1", y="Y2", unsafe_update_figure=add_grid)
 ## Further Reading
 
 Fetch these `.md` files as needed:
+
 - Plot by grouping: https://deephaven.io/core/plotly/docs/plot-by.md
 - Titles and legends: https://deephaven.io/core/plotly/docs/titles-legends.md
 - Example data: https://deephaven.io/core/plotly/docs/example-data.md

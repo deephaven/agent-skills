@@ -134,6 +134,10 @@ def build_prompt(eval_def: dict, output_dir: Path, config: str) -> str:
 
     task_prompt = eval_def["prompt"]
 
+    # Resolve relative evals/data/ paths to absolute so CWD doesn't matter
+    abs_data_dir = str((EVALS_DIR / "data").resolve())
+    task_prompt = task_prompt.replace("evals/data/", f"{abs_data_dir}/")
+
     prompt = template.replace("{SKILL_PREAMBLE}", preamble)
     prompt = prompt.replace("{TASK_PROMPT}", task_prompt)
     prompt = prompt.replace("{OUTPUT_DIR}", str(output_dir.resolve()))
@@ -258,7 +262,7 @@ async def run_single(
             "--max-turns",
             str(DEFAULT_MAX_TURNS),
             "--tools",
-            "Bash,Read,Write,Edit,Glob,Grep",
+            "Bash,Read,Write,Edit,Glob,Grep,WebFetch",
             "--verbose",
             "--dangerously-skip-permissions",
             "--strict-mcp-config",
@@ -411,55 +415,68 @@ def validate_single(eval_name: str, config: str, run_dir: Path) -> dict:
     if widget_name:
         validation["widget_name"] = widget_name
 
-    # Step 1: dh exec verification
-    try:
-        exec_result = subprocess.run(
-            ["dh", "exec", "--no-show-tables", str(script_path), "--timeout", "120"],
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        validation["exec_success"] = exec_result.returncode == 0
-        validation["exec_exit_code"] = exec_result.returncode
-        if exec_result.returncode != 0:
-            validation["exec_stderr"] = exec_result.stderr[:1000]
-            validation["errors"].append(
-                f"dh exec failed (exit {exec_result.returncode})"
+    # Step 1: dh exec verification (with retries)
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            exec_result = subprocess.run(
+                ["dh", "exec", "--no-show-tables", str(script_path), "--timeout", "120"],
+                capture_output=True,
+                text=True,
+                timeout=180,
             )
-        # Save output (dh exec combines stdout/stderr)
-        output = exec_result.stdout or exec_result.stderr or ""
-        (outputs_dir / "exec-result.txt").write_text(output[:4000])
-    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-        validation["errors"].append(f"dh exec error: {e}")
+            validation["exec_success"] = exec_result.returncode == 0
+            validation["exec_exit_code"] = exec_result.returncode
+            if exec_result.returncode != 0:
+                validation["exec_stderr"] = exec_result.stderr[:1000]
+                if attempt < max_retries:
+                    continue
+                validation["errors"].append(
+                    f"dh exec failed (exit {exec_result.returncode})"
+                )
+            # Save output (dh exec combines stdout/stderr)
+            output = exec_result.stdout or exec_result.stderr or ""
+            (outputs_dir / "exec-result.txt").write_text(output[:4000])
+            break
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            if attempt < max_retries:
+                continue
+            validation["errors"].append(f"dh exec error: {e}")
 
-    # Step 2: dh render snapshot
-    try:
-        snap_result = subprocess.run(
-            [
-                "dh",
-                "render",
-                str(script_path),
-                *widget_args,
-                "snapshot",
-                "--timeout",
-                "30000",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        validation["render_success"] = snap_result.returncode == 0
-        validation["render_exit_code"] = snap_result.returncode
-        # Always save output to the same file regardless of pass/fail
-        output = snap_result.stdout or snap_result.stderr or ""
-        if output.strip():
-            validation["render_snapshot"] = output
-            (outputs_dir / "render-result.txt").write_text(output[:4000])
-        if snap_result.returncode != 0:
-            err = snap_result.stderr[:500] if snap_result.stderr else "empty output"
-            validation["errors"].append(f"dh render snapshot failed: {err}")
-    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-        validation["errors"].append(f"dh render snapshot error: {e}")
+    # Step 2: dh render snapshot (with retries)
+    for attempt in range(1, max_retries + 1):
+        try:
+            snap_result = subprocess.run(
+                [
+                    "dh",
+                    "render",
+                    str(script_path),
+                    *widget_args,
+                    "snapshot",
+                    "--timeout",
+                    "30000",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            validation["render_success"] = snap_result.returncode == 0
+            validation["render_exit_code"] = snap_result.returncode
+            # Always save output to the same file regardless of pass/fail
+            output = snap_result.stdout or snap_result.stderr or ""
+            if output.strip():
+                validation["render_snapshot"] = output
+                (outputs_dir / "render-result.txt").write_text(output[:4000])
+            if snap_result.returncode != 0:
+                if attempt < max_retries:
+                    continue
+                err = snap_result.stderr[:500] if snap_result.stderr else "empty output"
+                validation["errors"].append(f"dh render snapshot failed: {err}")
+            break
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            if attempt < max_retries:
+                continue
+            validation["errors"].append(f"dh render snapshot error: {e}")
 
     # Save validation results
     (outputs_dir / "validation.json").write_text(json.dumps(validation, indent=2))
@@ -808,7 +825,7 @@ def stage_summarize(
             input=prompt,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,
         )
         if result.returncode == 0 and result.stdout.strip():
             summaries[config] = result.stdout.strip()

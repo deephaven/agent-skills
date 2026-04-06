@@ -14,9 +14,8 @@ You will complete ALL phases below in this single session. Do not stop early.
 
 Write a SINGLE Python script that uses Deephaven APIs:
 
-- Load CSV data using the RELATIVE path exactly as given in the task (e.g. `evals/data/...`)
+- Load CSV data using the ABSOLUTE path exactly as given in the task
 - Use `deephaven.read_csv()` or `pandas.read_csv()` + `deephaven.pandas.to_table()`
-- Do NOT convert relative paths to absolute paths — the script runs inside a VM where absolute host paths like `/home/...` do not exist
 - Perform the data analysis described in the task
 - Create a `deephaven.ui` dashboard: `dashboard = ui.dashboard(layout())`
 - Organize the dashboard with clear labels and logical layout
@@ -25,7 +24,7 @@ Example CSV loading (use the path from the task, not this exact path):
 
 ```python
 from deephaven import read_csv
-data = read_csv("evals/data/some-dataset/file.csv")
+data = read_csv("/workspace/tools/evals/data/some-dataset/file.csv")
 ```
 
 Write the script to: {OUTPUT_DIR}/script.py

@@ -13,31 +13,31 @@ metadata:
 
 **BEFORE writing ANY code involving these topics, you MUST read the reference file:**
 
-| Topic | Reference File | Read BEFORE writing code that... |
-|-------|----------------|----------------------------------|
-| Joins | `references/joins.md` | uses natural_join, aj, raj, exact_join, range_join |
-| Aggregations | `references/aggregations.md` | uses agg_by, sum_by, avg_by, count_by, etc. |
-| Update-by | `references/updateby.md` | uses rolling ops, cumulative ops, EMAs, forward fill |
-| Time | `references/time-operations.md` | parses, bins, or manipulates timestamps |
-| Kafka | `references/kafka.md` | consumes from or produces to Kafka |
-| Iceberg | `references/iceberg.md` | reads/writes Iceberg tables |
-| UI | `references/ui.md` | creates dashboards, components, or uses hooks |
-| Plotting | `references/plotting.md` | creates charts or visualizations with dx |
-| CSV | `references/csv.md` | imports/exports CSV files, fixes column types, parses dates from CSVs |
-| Sitemap | `references/sitemap.md` | needs to look up additional documentation URLs |
-
-If you read Aggregations you must also read update-by, as they often go hand-in-hand.
+| Topic        | Reference File                  | Read BEFORE writing code that...                                      |
+| ------------ | ------------------------------- | --------------------------------------------------------------------- |
+| Joins        | `references/joins.md`           | uses natural_join, aj, raj, exact_join, range_join                    |
+| Aggregations | `references/aggregations.md`    | uses agg_by, sum_by, avg_by, count_by, etc.                           |
+| Update-by    | `references/updateby.md`        | uses rolling ops, cumulative ops, EMAs, forward fill                  |
+| Time         | `references/time-operations.md` | parses, bins, or manipulates timestamps                               |
+| Kafka        | `references/kafka.md`           | consumes from or produces to Kafka                                    |
+| Iceberg      | `references/iceberg.md`         | reads/writes Iceberg tables                                           |
+| UI           | `references/ui.md`              | creates dashboards, components, or uses hooks                         |
+| Plotting     | `references/plotting.md`        | creates charts or visualizations with dx                              |
+| CSV          | `references/csv.md`             | imports/exports CSV files, fixes column types, parses dates from CSVs |
+| Sitemap      | `references/sitemap.md`         | needs to look up additional documentation URLs                        |
 
 **Do NOT guess or rely on memory.** Deephaven APIs have specific patterns that differ from similar libraries. Reading the reference ensures correct usage.
 
 **When debugging errors:**
-1. Re-read the relevant reference file for the operation that failed
+
+1. Refer to the relevant reference file for the operation that failed
 2. Compare your code against the reference examples
 3. Check for common mistakes noted in the reference
 
 **YOU NEVER ADD PRINT STATEMENTS TO PRINT TABLES, DO NOT CONVERT TO PANDAS JUST TO PRINT**
 
 **Fetch online docs when needed:**
+
 - Read the sitemap reference if you need to look up documentation URLs for specific operations or classes.
 
 ---
@@ -51,6 +51,7 @@ If you read Aggregations you must also read update-by, as they often go hand-in-
 **Avoid Python UDFs in query strings.** Each Python call crosses the Python-Java boundary (~30x slower). Use built-in functions from `java.lang.Math`, time functions, and auto-imported query language functions instead.
 
 **Use the right column operation:**
+
 - `select`/`update`: Materialize in RAM - use for expensive formulas accessed frequently
 - `view`/`update_view`: On-demand calculation - use for fast formulas or infrequent access
 - `lazy_update`: Cache results - use for repeated values
@@ -81,12 +82,12 @@ t = ring_table(source, capacity=1000)
 
 ### Table Types
 
-| Type | Memory | Use Case |
-|------|--------|----------|
-| Static | Fixed | Imported files, snapshots |
-| Append-only | Unbounded | Complete history from streams |
-| Blink | Bounded | Current cycle only (Kafka default) |
-| Ring | Bounded | Last N rows only |
+| Type        | Memory    | Use Case                           |
+| ----------- | --------- | ---------------------------------- |
+| Static      | Fixed     | Imported files, snapshots          |
+| Append-only | Unbounded | Complete history from streams      |
+| Blink       | Bounded   | Current cycle only (Kafka default) |
+| Ring        | Bounded   | Last N rows only                   |
 
 ### Extracting Scalar Values
 
@@ -178,20 +179,21 @@ t.where("Timestamp > parseInstant(`2024-01-01T00:00:00 America/New_York`)")
 
 **Read `references/joins.md` before using joins.**
 
-| Join | Use Case | Match Type |
-|------|----------|------------|
-| `natural_join` | Add columns from right, NULL if no match | Exact |
-| `exact_join` | Add columns, error if not exactly one match | Exact |
-| `join` | All matching combinations | Exact |
-| `aj` | As-of join: find closest <= timestamp | Time-series |
-| `raj` | Reverse as-of: find closest >= timestamp | Time-series |
-| `range_join` | Match within ranges, aggregate results | Range |
+| Join           | Use Case                                    | Match Type  |
+| -------------- | ------------------------------------------- | ----------- |
+| `natural_join` | Add columns from right, NULL if no match    | Exact       |
+| `exact_join`   | Add columns, error if not exactly one match | Exact       |
+| `join`         | All matching combinations                   | Exact       |
+| `aj`           | As-of join: find closest <= timestamp       | Time-series |
+| `raj`          | Reverse as-of: find closest >= timestamp    | Time-series |
+| `range_join`   | Match within ranges, aggregate results      | Range       |
 
 ### Aggregations Overview
 
 **Read `references/aggregations.md` before using aggregations.**
 
 **Dedicated (single operation):**
+
 ```python
 from deephaven import new_table
 from deephaven.column import double_col, int_col, string_col
@@ -212,6 +214,7 @@ t.last_by("Sym")  # Last row per group
 ```
 
 **Combined (multiple operations):**
+
 ```python
 from deephaven import agg, new_table
 from deephaven.column import double_col, int_col, string_col
@@ -237,17 +240,20 @@ t.agg_by(
 ### Query String Syntax
 
 **Literals:**
+
 - Boolean: `true`, `false` (lowercase)
 - Int: `42`, Long: `42L`, Double: `3.14` (underscores like `1_000L` are NOT supported)
 - String: backticks `` `hello` ``
-- DateTime: `parseInstant(\`2024-01-01T12:00:00 America/New_York\`)` (short aliases like `NY` do NOT work)
+- DateTime: `parseInstant(\`2024-01-01T12:00:00 America/New_York\`)`(short aliases like`NY` do NOT work)
 - Duration: `'PT1h30m'`, Period: `'P1y2m3d'`
 
 **Built-in variables:**
+
 - `i` - row index (0-based)
 - `ii` / `k` - row key (stable identifier)
 
 **Ternary operator:**
+
 ```python
 from deephaven import empty_table
 
@@ -256,6 +262,7 @@ t.update(["Category = Price > 100 ? `High` : `Low`"])
 ```
 
 **Null handling:**
+
 ```python
 from deephaven import empty_table
 
@@ -284,15 +291,15 @@ t_parquet = read("/tmp/output.parquet")
 
 ## Reference Documentation
 
-| Reference | Content |
-|-----------|---------|
-| `references/joins.md` | All 6 join types with examples, match syntax, performance tips |
-| `references/aggregations.md` | Dedicated and combined aggregations, 20+ aggregators, common patterns |
-| `references/updateby.md` | Rolling/cumulative ops, EMAs, MACD/Bollinger patterns |
-| `references/time-operations.md` | Time literals, parsing, binning, calendars, timezone conversion |
-| `references/kafka.md` | Kafka consumption/production, table types, key/value specs |
-| `references/iceberg.md` | Catalog types, reading/writing tables, partitioned writes |
-| `references/ui.md` | Dashboard structure, hooks, components, ui.table, styling |
-| `references/plotting.md` | Deephaven Express (dx), all plot types, subplots, interactivity |
-| `references/csv.md` | CSV import/export, column types, renaming, date parsing, messy files |
-| `references/sitemap.md` | Full documentation URL lookup |
+| Reference                       | Content                                                               |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `references/joins.md`           | All 6 join types with examples, match syntax, performance tips        |
+| `references/aggregations.md`    | Dedicated and combined aggregations, 20+ aggregators, common patterns |
+| `references/updateby.md`        | Rolling/cumulative ops, EMAs, MACD/Bollinger patterns                 |
+| `references/time-operations.md` | Time literals, parsing, binning, calendars, timezone conversion       |
+| `references/kafka.md`           | Kafka consumption/production, table types, key/value specs            |
+| `references/iceberg.md`         | Catalog types, reading/writing tables, partitioned writes             |
+| `references/ui.md`              | Dashboard structure, hooks, components, ui.table, styling             |
+| `references/plotting.md`        | Deephaven Express (dx), all plot types, subplots, interactivity       |
+| `references/csv.md`             | CSV import/export, column types, renaming, date parsing, messy files  |
+| `references/sitemap.md`         | Full documentation URL lookup                                         |
