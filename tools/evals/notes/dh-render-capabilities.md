@@ -22,7 +22,6 @@ interactivity, table data) but without requiring a test script.
 
 ## Key Flags
 
-- `--vm` — Run in Firecracker VM (consistent environment)
 - `--json` — JSON output (parseable by eval harness)
 - `--timeout <ms>` — Render timeout (default 15000ms)
 - `--rows <n>` — Max table rows to fetch (default 10)
@@ -34,17 +33,17 @@ Actions execute left-to-right. This is powerful for eval:
 
 ```bash
 # Basic: does it render?
-dh render --vm script.py snapshot
+dh render script.py snapshot
 
 # With interaction: select a filter, then check state
-dh render --vm script.py select "Region" "northeast" wait 1000 snapshot
+dh render script.py select "Region" "northeast" wait 1000 snapshot
 
 # Data verification: list tables and fetch one
-dh render --vm script.py tables
-dh render --vm script.py table my_table --rows 20
+dh render script.py tables
+dh render script.py table my_table --rows 20
 
 # Full diagnostic
-dh render --vm script.py diagnose
+dh render script.py diagnose
 ```
 
 ## What the Accessibility Tree Contains
@@ -85,11 +84,3 @@ This catches the runtime errors that `dh exec` misses (lazy evaluation of @ui.co
 
 Non-zero exit code from `dh render` = the dashboard has problems.
 
-## VM Pool for Parallel Evals
-
-When running many evals in parallel:
-```bash
-dh vm pool scale 5  # pre-warm 5 VMs
-```
-
-Each VM uses 4GB RAM + 4 vCPUs. Scale responsibly for the machine.

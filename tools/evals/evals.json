@@ -56,7 +56,7 @@
       "id": 4,
       "name": "hotel-monthly-aggregations",
       "dataset": "jessemostipak--hotel-booking-demand",
-      "prompt": "I have hotel booking data at evals/data/jessemostipak--hotel-booking-demand/hotel_bookings.csv with 119k rows. Columns include hotel (Resort/City), is_canceled, lead_time, arrival_date_year, arrival_date_month, stays_in_weekend_nights, stays_in_week_nights, adults, children, babies, meal, country, market_segment, adr, and more. Build a Deephaven dashboard with: monthly booking counts aggregated by hotel type, a cancellation rate comparison between Resort and City hotels, average daily rate (adr) by market_segment, and a picker to filter by arrival_date_year. Use agg_by for the aggregations and deephaven.ui.dashboard for layout.",
+      "prompt": "I have hotel booking data at evals/data/jessemostipak--hotel-booking-demand/hotel_bookings.csv with 119k rows. Columns include hotel (Resort/City), is_canceled, lead_time, arrival_date_year, arrival_date_month, stays_in_weekend_nights, stays_in_week_nights, adults, children, babies, meal, country, market_segment, adr, and more. Build a Deephaven dashboard with: a bar chart (dx.bar) of monthly booking counts by hotel type, a bar chart of cancellation rate comparison between Resort and City hotels, a bar chart (dx.bar) of average daily rate (adr) by market_segment (pre-aggregate with agg_by first), and a picker to filter by arrival_date_year. Use agg_by for the aggregations and deephaven.ui.dashboard for layout.",
       "expected_output": "A dashboard with monthly booking aggregations, cancellation rates by hotel type, ADR by segment, and year filtering.",
       "skill_areas": ["aggregations", "plotting", "ui"],
       "expectations": [
@@ -65,7 +65,7 @@
         "The script uses agg_by, count_by, or avg_by for computing aggregated statistics",
         "The dashboard shows booking counts broken down by hotel type",
         "The dashboard includes a cancellation rate metric or chart",
-        "The dashboard includes a chart of ADR (average daily rate) by market segment",
+        "The dashboard includes a bar chart (dx.bar) of ADR (average daily rate) by market segment",
         "The dashboard has a picker to filter by year"
       ]
     },
@@ -73,16 +73,16 @@
       "id": 5,
       "name": "videogame-sales-ranking",
       "dataset": "gregorut--videogamesales",
-      "prompt": "I have video game sales data at evals/data/gregorut--videogamesales/vgsales.csv with columns: Rank, Name, Platform, Year, Genre, Publisher, NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales. Build a Deephaven dashboard that aggregates total sales by genre and by platform, shows the top 10 publishers by global sales, and has a time-series of annual global sales trends. Include a picker to filter by genre. Use aggregation operations like sum_by or agg_by, and deephaven.ui.dashboard for layout.",
-      "expected_output": "A dashboard with sales aggregations by genre/platform, top publishers ranking, annual trends, and genre filtering.",
+      "prompt": "I have video game sales data at evals/data/gregorut--videogamesales/vgsales.csv with columns: Rank, Name, Platform, Year, Genre, Publisher, NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales. Build a Deephaven dashboard with: a bar chart (dx.bar) of total sales by genre, a bar chart of total sales by platform, a table of the top 10 publishers by global sales, and a line chart (dx.line) of annual global sales trends over time. Include a picker to filter by genre. Pre-aggregate data with sum_by or agg_by before plotting. Use deephaven.ui.dashboard for layout.",
+      "expected_output": "A dashboard with bar charts for genre/platform sales, top publishers table, line chart of annual trends, and genre filtering.",
       "skill_areas": ["aggregations", "plotting", "ui"],
       "expectations": [
         "The script executes without errors via dh exec",
         "The dashboard renders successfully via dh render",
-        "The script uses aggregation operations to compute total sales by category",
-        "The dashboard includes a chart showing sales by genre or platform",
+        "The script uses aggregation operations (sum_by, agg_by) to compute total sales before plotting",
+        "The dashboard includes a bar chart (dx.bar) of sales by genre or platform",
         "The dashboard shows a ranking or top-N publishers by sales",
-        "The dashboard includes a time-series or trend chart of annual sales",
+        "The dashboard includes a line chart (dx.line) of annual sales trends",
         "The dashboard has a picker to filter by genre"
       ]
     },
@@ -107,17 +107,16 @@
       "id": 7,
       "name": "telco-churn-null-handling",
       "dataset": "blastchar--telco-customer-churn",
-      "prompt": "I have telecom customer data at evals/data/blastchar--telco-customer-churn/WA_Fn-UseC_-Telco-Customer-Churn.csv. It has 21 columns including customerID, gender, SeniorCitizen, tenure, PhoneService, InternetService, OnlineSecurity, StreamingTV, Contract, MonthlyCharges, TotalCharges, and Churn. Warning: the TotalCharges column is stored as a string and has some blank/null values that need to be handled carefully when converting to numeric. Build a Deephaven dashboard showing churn rates by contract type, monthly charges distribution for churned vs non-churned, and service adoption breakdown. Parse TotalCharges to numeric safely. Include a picker to filter by InternetService type. Use deephaven.ui.dashboard.",
+      "prompt": "I have telecom customer data at evals/data/blastchar--telco-customer-churn/WA_Fn-UseC_-Telco-Customer-Churn.csv. It has 21 columns including customerID, gender, SeniorCitizen, tenure, PhoneService, InternetService, OnlineSecurity, StreamingTV, Contract, MonthlyCharges, TotalCharges, and Churn. Warning: the TotalCharges column is stored as a string and has some blank/null values that need to be handled carefully when converting to numeric. Build a Deephaven dashboard with: a bar chart (dx.bar) of churn rates by contract type, a histogram (dx.histogram) of MonthlyCharges distribution split by Churn status, and a bar chart of service adoption breakdown. Parse TotalCharges to numeric safely. Include a picker to filter by InternetService type. Use deephaven.ui.dashboard.",
       "expected_output": "A dashboard that safely handles the TotalCharges null/string issue and shows churn analysis with service breakdowns.",
       "skill_areas": ["csv", "aggregations", "plotting", "ui"],
       "expectations": [
         "The script executes without errors via dh exec",
         "The dashboard renders successfully via dh render",
-        "The script handles TotalCharges conversion from string to numeric with null safety",
+        "The script executes without crashing on blank TotalCharges values (either by explicit null-safe parsing or by relying on read_csv type inference)",
         "The dashboard shows churn rates broken down by contract type",
-        "The dashboard includes a chart comparing monthly charges by churn status",
-        "The dashboard has a picker for InternetService type filtering",
-        "The script does not crash on null or blank TotalCharges values"
+        "The dashboard includes a histogram or chart (dx.histogram or dx.bar) comparing monthly charges by churn status",
+        "The dashboard has a picker for InternetService type filtering"
       ]
     },
     {

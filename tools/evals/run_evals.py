@@ -310,6 +310,10 @@ async def run_single(
             if claude_parsed:
                 result["cost_usd"] = claude_parsed.get("cost_usd")
                 result["num_turns"] = claude_parsed.get("num_turns")
+                # Extract actual model used from modelUsage keys
+                model_usage = claude_parsed.get("modelUsage", {})
+                if model_usage:
+                    result["model_used"] = next(iter(model_usage))
 
             if exec_result["stderr"]:
                 result["stderr"] = exec_result["stderr"].decode()[:2000]
@@ -366,6 +370,120 @@ async def run_single(
         console.print(f"  {counter}{status} {eval_name} [{config}] ({dur:.0f}s)")
 
         return result
+
+
+def _load_skill_content() -> str:
+    """Read all skill files and concatenate them for injection into prompts."""
+    parts = []
+    skill_md = SKILL_DIR / "SKILL.md"
+    if skill_md.exists():
+        parts.append(f"### SKILL.md\n\n{skill_md.read_text()}")
+    refs_dir = SKILL_DIR / "references"
+    if refs_dir.is_dir():
+        for ref_file in sorted(refs_dir.glob("*.md")):
+            parts.append(f"### references/{ref_file.name}\n\n{ref_file.read_text()}")
+    return "\n\n---\n\n".join(parts)
+
+
+async def generate_recommendations(
+    outputs_dir: Path, eval_name: str, config: str
+) -> None:
+    """Generate skill-recommendations.md from a session transcript using Sonnet."""
+    transcript_path = outputs_dir / "transcript.md"
+    output_path = outputs_dir / "skill-recommendations.md"
+
+    if not transcript_path.exists():
+        console.print(
+            f"    [yellow]SKIP[/yellow] {eval_name} [{config}]: no transcript.md (run parse first)"
+        )
+        return
+
+    skill_content = _load_skill_content()
+    prompt = RECOMMEND_PROMPT.format(
+        output_path=output_path,
+        transcript_path=transcript_path,
+        skill_content=skill_content,
+    )
+
+    result = await _execute_claude(
+        [
+            "claude",
+            "-p",
+            "--model",
+            "sonnet",
+            "--permission-mode",
+            "acceptEdits",
+            "--allowedTools",
+            "Read,Write",
+            "--max-turns",
+            "10",
+            "--strict-mcp-config",
+        ],
+        timeout=120,
+        stdin_input=prompt,
+    )
+
+    if result["returncode"] == 0 and output_path.exists():
+        console.print(
+            f"    [green]OK[/green] {eval_name} [{config}]"
+        )
+    else:
+        stderr = result.get("stderr", b"")
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode(errors="replace")
+        detail = f" (exit {result['returncode']})"
+        if result.get("timed_out"):
+            detail = " (timed out)"
+        if stderr:
+            detail += f": {stderr[:200]}"
+        console.print(
+            f"    [red]FAIL[/red] {eval_name} [{config}]{detail}"
+        )
+
+
+async def stage_recommend(
+    run_id: str,
+    eval_names: list[str] | None = None,
+    parallel: int = DEFAULT_PARALLEL,
+):
+    """Generate skill-recommendations.md for all runs (parallel)."""
+    run_dir = EVALS_RUNS_DIR / run_id
+    if not run_dir.exists():
+        console.print(f"[red]Run directory not found: {run_dir}[/red]")
+        return
+
+    items = []
+    for eval_dir in sorted(run_dir.iterdir()):
+        if not eval_dir.is_dir() or eval_dir.name.startswith("."):
+            continue
+        if eval_names and eval_dir.name not in eval_names:
+            continue
+        for config in CONFIGS:
+            outputs_dir = eval_dir / config / "run-1" / "outputs"
+            raw_jsonl = outputs_dir / "raw.jsonl"
+            if not raw_jsonl.exists():
+                continue
+            items.append((eval_dir.name, config, outputs_dir))
+
+    if not items:
+        console.print("  [dim]No session logs found[/dim]")
+        return
+
+    semaphore = asyncio.Semaphore(parallel)
+    progress = [0]
+    total = len(items)
+
+    async def recommend_one(eval_name: str, config: str, outputs_dir: Path):
+        async with semaphore:
+            progress[0] += 1
+            idx = progress[0]
+            console.print(
+                f"  [dim][{idx}/{total}][/dim] Recommending {eval_name} [{config}]..."
+            )
+            await generate_recommendations(outputs_dir, eval_name, config)
+
+    tasks = [recommend_one(n, c, d) for n, c, d in items]
+    await asyncio.gather(*tasks)
 
 
 def detect_widget_name(script_path: Path) -> str | None:
@@ -538,8 +656,10 @@ def extract_token_usage(raw_jsonl: Path) -> dict:
     }
 
 
-def parse_logs(run_dir: Path, eval_names: list[str] | None = None):
-    """Parse session logs for all runs."""
+async def parse_logs(
+    run_dir: Path, eval_names: list[str] | None = None, parallel: int = DEFAULT_PARALLEL
+):
+    """Parse session logs for all runs (parallel)."""
     # Collect items to parse for accurate counting
     parse_items = []
     for eval_dir in sorted(run_dir.iterdir()):
@@ -555,59 +675,33 @@ def parse_logs(run_dir: Path, eval_names: list[str] | None = None):
                 continue
             parse_items.append((eval_dir, config, run_1_dir, outputs_dir, raw_jsonl))
 
-    for i, (eval_dir, config, run_1_dir, outputs_dir, raw_jsonl) in enumerate(
-        parse_items, 1
+    if not parse_items:
+        return
+
+    semaphore = asyncio.Semaphore(parallel)
+    progress = [0]
+    total = len(parse_items)
+
+    async def parse_one(
+        eval_dir: Path, config: str, run_1_dir: Path, outputs_dir: Path, raw_jsonl: Path
     ):
-        console.print(
-            f"  [dim][{i}/{len(parse_items)}][/dim] Parsing {eval_dir.name} [{config}]..."
-        )
-        parse_session_log(raw_jsonl, outputs_dir)
-
-        # Update timing.json with actual token counts
-        token_usage = extract_token_usage(raw_jsonl)
-        timing_path = run_1_dir / "timing.json"
-        timing = json.loads(timing_path.read_text()) if timing_path.exists() else {}
-        timing.update(token_usage)
-        timing_path.write_text(json.dumps(timing, indent=2))
-
-
-def ensure_vm_pool(size: int = 2):
-    """Start the dh VM pool if not running, and scale to the desired size."""
-    try:
-        status = subprocess.run(
-            ["dh", "vm", "pool", "status"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if "not running" in status.stdout.lower():
-            console.print(f"[cyan]Starting VM pool (size={size})...[/cyan]")
-            # Pool start can take a while on first cold boot
-            result = subprocess.run(
-                ["dh", "vm", "pool", "start", "-n", str(size)],
-                capture_output=True,
-                text=True,
-                timeout=180,
+        async with semaphore:
+            progress[0] += 1
+            idx = progress[0]
+            console.print(
+                f"  [dim][{idx}/{total}][/dim] Parsing {eval_dir.name} [{config}]..."
             )
-            if result.returncode == 0:
-                console.print(f"[cyan]VM pool started (size={size})[/cyan]")
-            else:
-                console.print(
-                    f"[yellow]VM pool start returned {result.returncode}[/yellow]"
-                )
-        elif status.returncode == 0:
-            # Pool is running — scale to desired size
-            console.print(f"[cyan]VM pool already running, scaling to {size}...[/cyan]")
-            subprocess.run(
-                ["dh", "vm", "pool", "scale", str(size)],
-                capture_output=True,
-                timeout=10,
-            )
-            console.print(f"[cyan]VM pool ready[/cyan]")
-        else:
-            console.print(f"[yellow]VM pool status unclear, continuing[/yellow]")
-    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-        console.print(f"[yellow]VM pool setup skipped: {e}[/yellow]")
+            await asyncio.to_thread(parse_session_log, raw_jsonl, outputs_dir)
+
+            # Update timing.json with actual token counts
+            token_usage = extract_token_usage(raw_jsonl)
+            timing_path = run_1_dir / "timing.json"
+            timing = json.loads(timing_path.read_text()) if timing_path.exists() else {}
+            timing.update(token_usage)
+            timing_path.write_text(json.dumps(timing, indent=2))
+
+    tasks = [parse_one(*item) for item in parse_items]
+    await asyncio.gather(*tasks)
 
 
 async def stage_run(
@@ -624,16 +718,12 @@ async def stage_run(
     run_dir = EVALS_RUNS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    # Ensure VM pool is warm for dh exec inside claude -p sessions.
-    # Scale to parallel count so concurrent evals don't cold-start.
-    ensure_vm_pool(size=max(parallel, 2))
-
     # Write run config
     config_data = {
         "run_id": run_id,
         "start_time": datetime.now(timezone.utc).isoformat(),
-        "model": model or "default",
-        "effort": effort or "default",
+        "model": model,
+        "effort": effort,
         "configs": configs,
         "parallel": parallel,
         "timeout": timeout,
@@ -685,6 +775,13 @@ async def stage_run(
     )
     results = await asyncio.gather(*tasks)
 
+    # Resolve actual model from eval results if not explicitly set
+    if not config_data["model"]:
+        for r in results:
+            if r.get("model_used"):
+                config_data["model"] = r["model_used"]
+                break
+
     # Update run config
     config_data["end_time"] = datetime.now(timezone.utc).isoformat()
     config_data["results_summary"] = {
@@ -697,8 +794,10 @@ async def stage_run(
     return results
 
 
-def stage_validate(run_id: str, eval_names: list[str] | None = None):
-    """Run dh render validation on completed runs."""
+async def stage_validate(
+    run_id: str, eval_names: list[str] | None = None, parallel: int = DEFAULT_PARALLEL
+):
+    """Run dh render validation on completed runs (parallel)."""
     run_dir = EVALS_RUNS_DIR / run_id
     if not run_dir.exists():
         console.print(f"[red]Run directory not found: {run_dir}[/red]")
@@ -717,18 +816,28 @@ def stage_validate(run_id: str, eval_names: list[str] | None = None):
                 continue
             validate_items.append((eval_dir, config))
 
-    results = []
-    for i, (eval_dir, config) in enumerate(validate_items, 1):
-        console.print(
-            f"  [dim][{i}/{len(validate_items)}][/dim] Validating {eval_dir.name} [{config}]..."
-        )
-        v = validate_single(eval_dir.name, config, run_dir)
-        results.append(v)
-        status = "[green]OK[/green]" if v["render_success"] else "[red]FAIL[/red]"
-        errs = f" ({len(v['errors'])} errors)" if v["errors"] else ""
-        console.print(f"    {status}{errs}")
+    if not validate_items:
+        return []
 
-    return results
+    semaphore = asyncio.Semaphore(parallel)
+    progress = [0]
+    total = len(validate_items)
+
+    async def validate_one(eval_dir: Path, config: str) -> dict:
+        async with semaphore:
+            progress[0] += 1
+            idx = progress[0]
+            console.print(
+                f"  [dim][{idx}/{total}][/dim] Validating {eval_dir.name} [{config}]..."
+            )
+            v = await asyncio.to_thread(validate_single, eval_dir.name, config, run_dir)
+            status = "[green]OK[/green]" if v["render_success"] else "[red]FAIL[/red]"
+            errs = f" ({len(v['errors'])} errors)" if v["errors"] else ""
+            console.print(f"    {status}{errs}")
+            return v
+
+    tasks = [validate_one(d, c) for d, c in validate_items]
+    return await asyncio.gather(*tasks)
 
 
 def print_results_table(results: list[dict]):
@@ -753,6 +862,39 @@ def print_results_table(results: list[dict]):
 def generate_run_id() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
+
+RECOMMEND_PROMPT = """\
+You are analyzing a session transcript from an AI agent that wrote a \
+Deephaven dashboard script. Read the transcript and write a brief reflection.
+
+Write your output to: {output_path}
+
+Content (max 40 lines):
+
+- **Errors encountered:** List every distinct error hit during script writing \
+and verification. Include the exact error message, which attempt triggered it, \
+and what code caused it.
+- **Fixes applied:** For each error, what changed and why. Include before/after \
+code snippets where helpful.
+- **Skill gaps:** Identify what documentation or examples would have prevented \
+these errors. Be specific about what is MISSING from the skill files below — \
+do not recommend adding content that is already covered.
+- **Metrics:** Number of `dh exec` attempts, number of `dh render` attempts, \
+and average retry count for each.
+
+Session transcript: {transcript_path}
+
+## Current Skill Files
+
+The agent had access to the following skill documentation. Use this to assess \
+whether errors stem from gaps in the skill or from the agent ignoring existing \
+guidance.
+
+{skill_content}
+
+Be concise and specific. Do not include generic advice. Do not recommend \
+adding content that already exists in the skill files above.
+"""
 
 SUMMARIZE_PROMPT = """\
 You are analyzing eval reflections from AI agents that wrote Deephaven dashboard scripts.
@@ -841,43 +983,67 @@ def stage_summarize(
         console.print(f"  [green]Updated:[/green] {benchmark_path}")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Evals pipeline orchestrator")
-    parser.add_argument(
-        "--evals",
-        nargs="*",
-        type=int,
-        help="Specific eval IDs to run (default: all)",
-    )
-    parser.add_argument(
-        "--config",
-        choices=["with_skill", "without_skill", "both"],
-        default="both",
-        help="Which configuration(s) to run",
-    )
-    parser.add_argument("--parallel", type=int, default=DEFAULT_PARALLEL)
-    parser.add_argument("--skip-existing", action="store_true")
-    parser.add_argument(
-        "--stage",
-        choices=["run", "validate", "parse", "grade", "aggregate", "summarize", "viewer", "all"],
-        default="all",
-    )
-    parser.add_argument("--model", help="Model override (e.g., sonnet, opus)")
-    parser.add_argument(
-        "--effort",
-        choices=["low", "medium", "high", "max"],
-        help="Thinking effort level for claude -p",
-    )
-    parser.add_argument("--run-id", help="Run ID (auto-generated if not specified)")
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=DEFAULT_TIMEOUT,
-        help=f"Timeout per claude -p attempt in seconds (default: {DEFAULT_TIMEOUT})",
-    )
+async def stage_grade(
+    run_id: str,
+    evals: list[dict],
+    configs: list[str],
+    eval_ids: list[int] | None = None,
+    parallel: int = DEFAULT_PARALLEL,
+):
+    """Grade eval runs in parallel."""
+    from evals.grade import grade_run, load_evals_map
 
-    args = parser.parse_args()
+    evals_map = load_evals_map()
+    run_dir = EVALS_RUNS_DIR / run_id
 
+    grade_items = []
+    for eval_dir in sorted(run_dir.iterdir()):
+        if not eval_dir.is_dir() or eval_dir.name not in evals_map:
+            continue
+        if eval_ids:
+            matching = [e for e in evals if e["name"] == eval_dir.name]
+            if not matching:
+                continue
+        eval_def = evals_map[eval_dir.name]
+        for config in configs:
+            outputs_dir = eval_dir / config / "run-1" / "outputs"
+            if not outputs_dir.exists():
+                continue
+            grade_items.append((eval_dir, config, eval_def))
+
+    if not grade_items:
+        return
+
+    semaphore = asyncio.Semaphore(parallel)
+    progress = [0]
+    total = len(grade_items)
+
+    async def grade_one(eval_dir: Path, config: str, eval_def: dict):
+        async with semaphore:
+            grading = await asyncio.to_thread(
+                grade_run, eval_dir.name, config, run_dir, eval_def
+            )
+            progress[0] += 1
+            idx = progress[0]
+            s = grading["summary"]
+            status = (
+                "[green]"
+                if s["pass_rate"] >= 0.8
+                else "[yellow]"
+                if s["pass_rate"] >= 0.5
+                else "[red]"
+            )
+            console.print(
+                f"  [dim][{idx}/{total}][/dim] {status}{eval_dir.name}[/] [{config}]: {s['passed']}/{s['total']} ({s['pass_rate']:.0%})"
+            )
+            return grading
+
+    tasks = [grade_one(d, c, e) for d, c, e in grade_items]
+    await asyncio.gather(*tasks)
+
+
+async def async_main(args):
+    """Async entry point for the pipeline."""
     evals = load_evals(args.evals)
     if not evals:
         console.print("[red]No evals found[/red]")
@@ -895,66 +1061,47 @@ def main():
     console.print(f"[bold]Stage:[/bold] {args.stage}")
 
     if args.stage in ("run", "all"):
-        results = asyncio.run(
-            stage_run(
-                evals,
-                run_id,
-                configs,
-                args.parallel,
-                args.model,
-                args.effort,
-                args.skip_existing,
-                args.timeout,
-            )
+        results = await stage_run(
+            evals,
+            run_id,
+            configs,
+            args.parallel,
+            args.model,
+            args.effort,
+            args.skip_existing,
+            args.timeout,
         )
         if results:
             print_results_table(results)
 
-    if args.stage in ("validate", "all"):
-        console.print("\n[bold]Stage: validate[/bold]")
+    # Parse must run before recommend (recommend reads transcript.md).
+    # Validate is independent and can run in parallel with parse.
+    if args.stage in ("validate", "parse") or args.stage == "all":
         eval_names = [e["name"] for e in evals] if args.evals else None
-        stage_validate(run_id, eval_names)
+        parallel_tasks = []
 
-    if args.stage in ("parse", "all"):
-        console.print("\n[bold]Stage: parse[/bold]")
+        if args.stage in ("validate", "all"):
+            console.print(f"\n[bold]Stage: validate[/bold] (parallel={args.parallel})")
+            parallel_tasks.append(stage_validate(run_id, eval_names, args.parallel))
+
+        if args.stage in ("parse", "all"):
+            console.print(f"\n[bold]Stage: parse[/bold] (parallel={args.parallel})")
+            parallel_tasks.append(
+                parse_logs(EVALS_RUNS_DIR / run_id, eval_names, args.parallel)
+            )
+
+        if parallel_tasks:
+            await asyncio.gather(*parallel_tasks)
+
+    # Recommend runs after parse (needs transcript.md) but before grade.
+    if args.stage in ("recommend", "all"):
         eval_names = [e["name"] for e in evals] if args.evals else None
-        parse_logs(EVALS_RUNS_DIR / run_id, eval_names)
+        console.print(f"\n[bold]Stage: recommend[/bold] (parallel={args.parallel})")
+        await stage_recommend(run_id, eval_names, args.parallel)
 
     if args.stage in ("grade", "all"):
-        console.print("\n[bold]Stage: grade[/bold]")
-        from evals.grade import grade_run, load_evals_map
-
-        evals_map = load_evals_map()
-        run_dir = EVALS_RUNS_DIR / run_id
-        # Collect items to grade for accurate counting
-        grade_items = []
-        for eval_dir in sorted(run_dir.iterdir()):
-            if not eval_dir.is_dir() or eval_dir.name not in evals_map:
-                continue
-            if args.evals:
-                matching = [e for e in evals if e["name"] == eval_dir.name]
-                if not matching:
-                    continue
-            eval_def = evals_map[eval_dir.name]
-            for config in configs:
-                outputs_dir = eval_dir / config / "run-1" / "outputs"
-                if not outputs_dir.exists():
-                    continue
-                grade_items.append((eval_dir, config, eval_def))
-
-        for i, (eval_dir, config, eval_def) in enumerate(grade_items, 1):
-            grading = grade_run(eval_dir.name, config, run_dir, eval_def)
-            s = grading["summary"]
-            status = (
-                "[green]"
-                if s["pass_rate"] >= 0.8
-                else "[yellow]"
-                if s["pass_rate"] >= 0.5
-                else "[red]"
-            )
-            console.print(
-                f"  [dim][{i}/{len(grade_items)}][/dim] {status}{eval_dir.name}[/] [{config}]: {s['passed']}/{s['total']} ({s['pass_rate']:.0%})"
-            )
+        console.print(f"\n[bold]Stage: grade[/bold] (parallel={args.parallel})")
+        await stage_grade(run_id, evals, configs, args.evals, args.parallel)
 
     if args.stage in ("aggregate", "all"):
         console.print("\n[bold]Stage: aggregate[/bold]")
@@ -996,6 +1143,45 @@ def main():
 
     run_dir = EVALS_RUNS_DIR / run_id
     console.print(f"\n[bold green]Done.[/bold green] Results in: {run_dir}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Evals pipeline orchestrator")
+    parser.add_argument(
+        "--evals",
+        nargs="*",
+        type=int,
+        help="Specific eval IDs to run (default: all)",
+    )
+    parser.add_argument(
+        "--config",
+        choices=["with_skill", "without_skill", "both"],
+        default="both",
+        help="Which configuration(s) to run",
+    )
+    parser.add_argument("--parallel", type=int, default=DEFAULT_PARALLEL)
+    parser.add_argument("--skip-existing", action="store_true")
+    parser.add_argument(
+        "--stage",
+        choices=["run", "recommend", "validate", "parse", "grade", "aggregate", "summarize", "viewer", "all"],
+        default="all",
+    )
+    parser.add_argument("--model", help="Model override (e.g., sonnet, opus)")
+    parser.add_argument(
+        "--effort",
+        choices=["low", "medium", "high", "max"],
+        help="Thinking effort level for claude -p",
+    )
+    parser.add_argument("--run-id", help="Run ID (auto-generated if not specified)")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT,
+        help=f"Timeout per claude -p attempt in seconds (default: {DEFAULT_TIMEOUT})",
+    )
+
+    args = parser.parse_args()
+    asyncio.run(async_main(args))
 
 
 if __name__ == "__main__":

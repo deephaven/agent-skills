@@ -43,18 +43,17 @@ The agent prompt is dramatically simpler than v1 — no Playwright phases at all
 3. Write to {OUTPUT_DIR}/script.py
 
 ## Phase 2: Verify Script
-Run: dh exec --vm {OUTPUT_DIR}/script.py --timeout 120
+Run: dh exec {OUTPUT_DIR}/script.py --timeout 120
 - Fix and retry up to 8 times if it fails
-- Do not proceed until exit code 0
+- Stop once exit code 0 or retries exhausted
 
-## Phase 3: Write Reflection
-Write {OUTPUT_DIR}/skill-recommendations.md (max 40 lines):
-- Errors encountered with exact messages
-- Fixes applied
-- What documentation would have prevented errors
+## Post-run: Recommendations (separate Sonnet call)
+After each eval finishes, a separate Sonnet session reads the session log
+and writes {OUTPUT_DIR}/skill-recommendations.md. This runs outside the
+eval semaphore so it doesn't inflate eval token counts.
 ```
 
-That's it. 3 phases instead of 6. No Playwright, no dh serve, no fix loop.
+That's it. 2 agent phases instead of 6. No Playwright, no dh serve, no fix loop.
 
 ## Validation (Harness-Side, Not Agent-Side)
 
@@ -62,14 +61,14 @@ After the agent finishes, the harness runs validation:
 
 ### Step 1: dh exec check
 ```bash
-dh exec --vm {script} --timeout 120
+dh exec {script} --timeout 120
 ```
 - Exit code 0 = script runs
 - Capture stderr for error analysis
 
 ### Step 2: dh render snapshot
 ```bash
-dh render --vm {script} snapshot
+dh render {script} snapshot
 ```
 - Parse accessibility tree
 - Count components by type
@@ -77,21 +76,21 @@ dh render --vm {script} snapshot
 
 ### Step 3: dh render tables
 ```bash
-dh render --vm {script} tables --json
+dh render {script} tables --json
 ```
 - List exported tables
 - Verify tables have data
 
 ### Step 4: dh render table (per table)
 ```bash
-dh render --vm {script} table {table_id} --json --rows 5
+dh render {script} table {table_id} --json --rows 5
 ```
 - Fetch actual data
 - Verify columns match manifest expectations
 
 ### Step 5: dh render diagnose
 ```bash
-dh render --vm {script} diagnose --json
+dh render {script} diagnose --json
 ```
 - Check for runtime errors
 - Catch lazy-evaluation failures
@@ -100,7 +99,7 @@ dh render --vm {script} diagnose --json
 ```bash
 # Parse accessibility tree for interactive elements
 # If picker found:
-dh render --vm {script} select "PickerLabel" "SomeValue" wait 1000 snapshot
+dh render {script} select "PickerLabel" "SomeValue" wait 1000 snapshot
 ```
 - Verify interactivity works
 - Compare before/after snapshots

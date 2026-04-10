@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from rich.console import Console
+from token_count import count_skill_tokens_from_disk
 
 console = Console()
 
@@ -138,8 +139,8 @@ def main():
         "metadata": {
             "skill_name": "deephaven-core-query-writing",
             "skill_path": str(EVALS_DIR.parent.parent / "skills" / "deephaven-core-query-writing"),
-            "executor_model": run_config.get("model", "default"),
-            "effort": run_config.get("effort", "default"),
+            "executor_model": run_config.get("model") or "unknown",
+            "effort": run_config.get("effort") or "unset",
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "evals_run": sorted(set(r["eval_id"] for r in runs)),
             "runs_per_configuration": 1,
@@ -149,6 +150,13 @@ def main():
         "notes": [],
     }
 
+    # Count skill tokens at aggregate time
+    try:
+        skill_dir = Path(benchmark["metadata"]["skill_path"])
+        benchmark["skill_tokens"] = count_skill_tokens_from_disk(skill_dir)
+    except Exception as e:
+        console.print(f"[yellow]Warning: could not count skill tokens: {e}[/yellow]")
+
     # Write outputs
     (run_dir / "benchmark.json").write_text(json.dumps(benchmark, indent=2))
 
@@ -157,8 +165,8 @@ def main():
         f"# Benchmark: deephaven-core-query-writing",
         f"**Run ID:** {args.run_id}",
         f"**Date:** {datetime.now().strftime('%Y-%m-%d')}",
-        f"**Model:** {run_config.get('model', 'default')}",
-        f"**Effort:** {run_config.get('effort', 'default')}",
+        f"**Model:** {run_config.get('model') or 'unknown'}",
+        f"**Effort:** {run_config.get('effort') or 'unset'}",
         "",
     ]
 

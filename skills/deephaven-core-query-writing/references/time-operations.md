@@ -1,407 +1,220 @@
 # Deephaven Time Operations Reference
 
-## Date-Time Literals
+## Types and Parsing
 
-In query strings, use single quotes for date-time values (not backticks, which are for strings).
+**Types:** `Instant` (timestamp with timezone), `LocalDate` (date only), `LocalTime` (time only), `Duration` (fixed time amount like `PT1h`), `Period` (calendar amount like `P1m`).
+
+**Timezone IDs:** Full IANA format (`America/New_York`, `America/Chicago`, `America/Los_Angeles`, `Europe/London`, `UTC`) or built-in aliases: `ET`, `CT`, `MT`, `PT`, `UTC`, `GMT`. Three-letter Java IDs (`EST`, `CST`, `PST`) and `NY` do NOT work.
 
 ```python
 from deephaven import empty_table
 
 t = empty_table(5).update(
     [
-        "Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1h'",
-        "Date = parseLocalDate(`2024-01-0` + (i + 1))",
-        "Time = parseLocalTime(`09:3` + i + `:00`)",
+        # Parse from strings (backtick-delimited in query strings)
+        "Ts = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1h'",
+        "D = parseLocalDate(`2024-01-0` + (i + 1))",
+        "T = parseLocalTime(`09:3` + i + `:00`)",
+        # Combine date + time into Instant
+        "Combined = toInstant(D, T, 'America/New_York')",
     ]
 )
 
-# Instant (timestamp with timezone) - MUST use parseInstant with full IANA timezone
-t.where("Timestamp > parseInstant(`2024-01-01T09:30:00 America/New_York`)")
-t.where("Timestamp > parseInstant(`2024-01-01T14:30:00 UTC`)")
-t.where("Timestamp > parseInstant(`2024-01-01T09:30:00.123456789 America/New_York`)")
+# Filtering with time literals
+t.where("Ts > parseInstant(`2024-01-01T11:00:00 America/New_York`)")
+t.where("D = '2024-01-01'")  # LocalDate comparison uses single quotes
+t.where("T > '09:30:00'")  # LocalTime comparison uses single quotes
 
-# Local date (no timezone)
-t.where("Date = '2024-01-01'")
+# Null-safe parsing (returns null instead of error on bad input)
+t.update(["Safe = parseInstantQuiet(`not-a-date`)"])
 
-# Local time (no timezone)
-t.where("Time > '09:30:00'")
+# Epoch timestamps (common in raw data)
+t.update(["FromEpoch = epochSecondsToInstant(1718454600)"])
+# Also: epochMillisToInstant(), epochMicrosToInstant(), epochNanosToInstant()
 
-# Duration (ISO 8601)
-t.update(["Later = Timestamp + 'PT1h'"])  # 1 hour
-t.update(["Later = Timestamp + 'PT30m'"])  # 30 minutes
-t.update(["Later = Timestamp + 'PT1h30m15s'"])  # 1h 30m 15s
-t.update(["Later = Timestamp - 'PT0.5s'"])  # 500 milliseconds
-
-# Period (calendar-based)
-t.update(["NextYear = Date + 'P1y'"])  # 1 year
-t.update(["NextMonth = Date + 'P1m'"])  # 1 month
-t.update(["NextWeek = Date + 'P7d'"])  # 7 days
+# Extract date/time parts from Instant
+t.update(
+    [
+        "DatePart = toLocalDate(Ts, timeZone(`America/New_York`))",
+        "TimePart = toLocalTime(Ts, timeZone(`America/New_York`))",
+    ]
+)
 ```
 
-**Timezone IDs (IANA format required):**
-- `America/New_York` - US Eastern
-- `America/Chicago` - US Central
-- `America/Los_Angeles` - US Pacific
-- `UTC` - Coordinated Universal Time
+**Non-standard date formats** (e.g., `MM/dd/yyyy`): use `simple_date_format` from `deephaven.time`:
+```python
+from deephaven import new_table
+from deephaven.column import string_col
+from deephaven.time import simple_date_format
 
-**WARNING:** Short aliases like `NY`, `ET`, `PT`, `CT` do NOT work in query string time literals. Always use full IANA timezone IDs with `parseInstant`.
+t = new_table([string_col("Raw", ["06/15/2024 14:30:00", "12/25/2024 09:00:00"])])
+fmt = simple_date_format("MM/dd/yyyy HH:mm:ss")
+t.update(["Parsed = fmt.parse(Raw).toInstant()"])
+```
 
-## Creating Timestamped Tables
+## Creating Time Data
 
 ```python
 from deephaven import empty_table, time_table
 
-# Time table - ticks at intervals
-ticking = time_table("PT1s")  # Every second
-ticking = time_table("PT0.1s")  # Every 100ms
+# Ticking time table (real-time)
+ticking = time_table("PT1s")  # every second
 ticking = time_table("PT1s", start_time="2024-01-01T09:30:00 America/New_York")
 
-# Empty table with timestamp formulas
+# Static timestamped table
 t = empty_table(100).update(
     ["Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1m'"]
 )
 
-# From Python datetime
-import datetime as dt
-
-from deephaven.time import to_j_instant
-
-ts = dt.datetime(2024, 1, 15, 10, 30, 0)
-j_instant = to_j_instant(ts)
+# Current time
+t = empty_table(1).update(
+    [
+        "Now = now()",
+        "TodayDate = today('America/New_York')",
+        "EngineTZ = timeZone()",
+    ]
+)
 ```
 
-## Parsing Time Data
+**From Python datetime:**
+```python
+import datetime as dt
+
+from deephaven.time import to_j_instant, to_j_local_date, to_j_local_time
+
+j_instant = to_j_instant(dt.datetime(2024, 1, 15, 10, 30))
+j_date = to_j_local_date(dt.date(2024, 1, 15))
+j_time = to_j_local_time(dt.time(10, 30, 0))
+```
+
+## Extracting Components
+
+All extraction functions take `(Instant, ZoneId)`. Use `timeZone()` to wrap timezone IDs.
+
+```python
+from deephaven import empty_table
+
+t = empty_table(10).update(
+    ["Ts = parseInstant(`2024-06-15T14:30:45 America/New_York`) + i * 'PT1h'"]
+)
+
+tz = "timeZone(`America/New_York`)"
+t.update(
+    [
+        f"Year = year(Ts, {tz})",
+        f"Month = monthOfYear(Ts, {tz})",
+        f"Day = dayOfMonth(Ts, {tz})",
+        f"DayOfWeek = dayOfWeekValue(Ts, {tz})",  # 1=Mon, 7=Sun
+        f"DayOfYear = dayOfYear(Ts, {tz})",
+        f"Hour = hourOfDay(Ts, {tz}, true)",  # 0-23
+        f"Minute = minuteOfHour(Ts, {tz})",
+        f"MinOfDay = minuteOfDay(Ts, {tz}, true)",  # 0-1439
+        f"Second = secondOfMinute(Ts, {tz})",
+        f"Millis = millisOfSecond(Ts, {tz})",
+        f"Micros = microsOfSecond(Ts, {tz})",
+        f"Nanos = nanosOfSecond(Ts, {tz})",
+    ]
+)
+```
+
+## Arithmetic and Differences
 
 ```python
 from deephaven import empty_table
 
 t = empty_table(5).update(
     [
-        "DateTimeString = `2024-01-0` + (i + 1) + `T10:00:00 UTC`",
-        "DateString = `2024-01-0` + (i + 1)",
-        "TimeString = `10:0` + i + `:00`",
-        "LocalDateCol = parseLocalDate(DateString)",
-        "LocalTimeCol = parseLocalTime(TimeString)",
-    ]
-)
-
-# Parse ISO 8601 format
-t.update(["Parsed = parseInstant(DateTimeString)"])
-
-# Parse local date
-t.update(["ParsedDate = parseLocalDate(DateString)"])
-
-# Parse local time
-t.update(["ParsedTime = parseLocalTime(TimeString)"])
-
-# Combine date and time columns
-t.update(["Combined = toInstant(LocalDateCol, LocalTimeCol, 'America/New_York')"])
-```
-
-## Extracting Components
-
-```python
-from deephaven import empty_table
-
-t = empty_table(10).update(
-    [
-        "Timestamp = parseInstant("
-        "`2024-06-15T14:30:45.123456789 America/New_York`"
-        ") + i * 'PT1h'",
+        "Ts = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1h'",
+        "Ts2 = Ts + 'PT30m'",
+        "D = parseLocalDate(`2024-01-0` + (i + 1))",
     ]
 )
 
 t.update(
     [
-        # Date components (use timeZone() to wrap timezone IDs)
-        "Year = year(Timestamp, timeZone(`America/New_York`))",
-        "Month = monthOfYear(Timestamp, timeZone(`America/New_York`))",
-        "Day = dayOfMonth(Timestamp, timeZone(`America/New_York`))",
-        "DayOfWeek = dayOfWeek(Timestamp, timeZone(`America/New_York`))",  # 1=Monday
-        "DayOfYear = dayOfYear(Timestamp, timeZone(`America/New_York`))",
-        # Time components
-        "Minute = minuteOfHour(Timestamp, timeZone(`America/New_York`))",
-        "Second = secondOfMinute(Timestamp, timeZone(`America/New_York`))",
-        "Millis = millisOfSecond(Timestamp, timeZone(`America/New_York`))",
-        "Nanos = nanosOfSecond(Timestamp, timeZone(`America/New_York`))",
-        # For hour/minuteOfDay, use Java methods via toLocalTime or toZonedDateTime
-        "LocalTime = toLocalTime(Timestamp, timeZone(`America/New_York`))",
-        "Hour = LocalTime.getHour()",
+        # Duration arithmetic on Instants (ISO 8601: PT1h, PT30m, PT1h30m15s, PT0.5s)
+        "Plus1Hour = Ts + 'PT1h'",
+        "Minus30Min = Ts - 'PT30m'",
+        # Period arithmetic on LocalDate (P1y, P1m, P7d)
+        "NextMonth = D + 'P1m'",
+        "NextYear = D + 'P1y'",
+        # Dedicated diff functions (cleaner than manual nanos division)
+        "DiffSec = diffSeconds(Ts, Ts2)",
+        "DiffMin = diffMinutes(Ts, Ts2)",
+        "DiffDays = diffDays(Ts, Ts2)",
+        "DiffNanos = diffNanos(Ts, Ts2)",
     ]
 )
 ```
 
-## Time Binning
+**Time constants (nanoseconds):** `SECOND`, `MINUTE`, `HOUR`, `DAY`, `WEEK`, `YEAR_365`, `YEAR_AVG`, `MILLI`, `MICRO`. Use for manual conversion: `(Ts2 - Ts1) / HOUR`.
+
+## Binning
 
 ```python
 from deephaven import empty_table
 
 t = empty_table(100).update(
-    [
-        "Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1m'",
-    ]
+    ["Ts = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1m'"]
 )
 
 t.update(
     [
-        # Round down to interval
-        "Bin5min = lowerBin(Timestamp, 'PT5m')",
-        "BinHour = lowerBin(Timestamp, 'PT1h')",
-        # Use Duration, NOT Period ('P1d' fails on Instants)
-        "BinDay = lowerBin(Timestamp, 'PT24h')",
-        # Round up to interval
-        "BinUp = upperBin(Timestamp, 'PT5m')",
+        "Bin5min = lowerBin(Ts, 'PT5m')",
+        "BinHour = lowerBin(Ts, 'PT1h')",
+        "BinDay = lowerBin(Ts, 'PT24h')",  # NOT 'P1d' — Period fails on Instants
+        "BinUp = upperBin(Ts, 'PT5m')",  # rounds up
+        "Midnight = atMidnight(Ts, timeZone(`America/New_York`))",
     ]
 )
 ```
 
-## Current Time
+## Formatting and Timezone Conversion
 
-**In query strings:**
 ```python
 from deephaven import empty_table
 
-t = empty_table(1)
-t.update(["CurrentTime = now()"])
-t.update(["Today = today('America/New_York')"])
-t.update(["TZ = timeZone()"])  # Engine timezone
+t = empty_table(5).update(["Ts = parseInstant(`2024-06-15T14:30:00 UTC`) + i * 'PT1h'"])
+
+t.update(
+    [
+        "DateStr = formatDate(Ts, timeZone(`America/New_York`))",  # "2024-06-15"
+        "FullStr = formatDateTime(Ts, timeZone(`America/New_York`))",
+        "NYTime = toZonedDateTime(Ts, timeZone(`America/New_York`))",
+        "Epoch = epochMillis(Ts)",  # also: epochNanos, epochSeconds, epochMicros
+    ]
+)
+
+# Reverse: epochMillisToInstant(long), epochNanosToInstant(long), etc.
 ```
 
-**Outside query strings (Python side):**
-```python
-from deephaven.time import dh_now, dh_time_zone, dh_today
+## Business Calendar
 
-current = dh_now()
-today = dh_today()
-tz = dh_time_zone()
-```
-
-## Time Arithmetic
+Uses the default calendar. No setup required.
 
 ```python
 from deephaven import empty_table
 
 t = empty_table(10).update(
     [
-        "Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1h'",
-        "Timestamp2 = Timestamp + 'PT30m'",
-        "Timestamp1 = Timestamp",
-    ]
-)
-
-t.update(
-    [
-        # Add/subtract durations
-        "Plus1Hour = Timestamp + 'PT1h'",
-        "Minus30Min = Timestamp - 'PT30m'",
-        # Difference between timestamps (returns nanoseconds)
-        "DiffNanos = Timestamp2 - Timestamp1",
-        # Convert to other units
-        "DiffSeconds = (Timestamp2 - Timestamp1) / SECOND",
-        "DiffMinutes = (Timestamp2 - Timestamp1) / MINUTE",
-        "DiffHours = (Timestamp2 - Timestamp1) / HOUR",
-    ]
-)
-```
-
-**Built-in time constants (nanoseconds):**
-- `SECOND` = 1,000,000,000
-- `MINUTE` = 60 * SECOND
-- `HOUR` = 60 * MINUTE
-- `DAY` = 24 * HOUR
-- `WEEK` = 7 * DAY
-- `YEAR_365` = 365 * DAY
-- `YEAR_AVG` = 365.2425 * DAY
-
-## Time Zone Conversion
-
-```python
-from deephaven import empty_table
-
-t = empty_table(5).update(
-    [
-        "Timestamp = parseInstant(`2024-06-15T14:30:00 UTC`) + i * 'PT1h'",
-    ]
-)
-
-t.update(
-    [
-        # Convert to different timezone for display
-        "NYTime = toZonedDateTime(Timestamp, timeZone(`America/New_York`))",
-        "LondonTime = toZonedDateTime(Timestamp, timeZone(`Europe/London`))",
-    ]
-)
-```
-
-## Formatting for Display
-
-```python
-from deephaven import empty_table
-
-t = empty_table(5).update(
-    [
-        "Timestamp = parseInstant(`2024-06-15T14:30:00 UTC`) + i * 'PT1h'",
-    ]
-)
-
-# Format instant as display string
-formatted = t.update(
-    ["Display = formatDateTime(Timestamp, timeZone(`America/New_York`))"]
-)
-```
-
-## Business Calendar Operations
-
-```python
-from deephaven import empty_table
-
-t = empty_table(10).update(
-    [
-        "Timestamp = parseInstant(`2024-06-10T10:00:00 America/New_York`) + i * 'PT24h'",
+        "Ts = parseInstant(`2024-06-10T10:00:00 America/New_York`) + i * 'PT24h'",
         "Start = parseInstant(`2024-06-10T10:00:00 America/New_York`)",
         "End = parseInstant(`2024-06-20T10:00:00 America/New_York`)",
     ]
 )
 
-# Check if business day (uses default calendar)
-t.where("isBusinessDay(Timestamp)")
-
-# Get next/previous business day
+t.where("isBusinessDay(Ts)")
 t.update(
     [
-        "NextBizDay = plusBusinessDays(Timestamp, 1)",
-        "PrevBizDay = minusBusinessDays(Timestamp, 1)",
+        "NextBiz = plusBusinessDays(Ts, 1)",
+        "PrevBiz = minusBusinessDays(Ts, 1)",
+        "BizBetween = diffBusinessDays(Start, End)",
+        "IsBizTime = isBusinessTime(Ts)",
     ]
 )
-
-# Business days between dates
-t.update(["BizDaysBetween = diffBusinessDays(Start, End)"])
 ```
-
-## Time-Based Joins
-
-```python
-import datetime
-
-from deephaven import new_table
-from deephaven.column import datetime_col, double_col, string_col
-
-trades = new_table(
-    [
-        string_col("Sym", ["AAPL", "GOOG"]),
-        datetime_col(
-            "TradeTime",
-            [
-                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
-            ],
-        ),
-        double_col("Price", [150.0, 140.0]),
-    ]
-)
-
-quotes = new_table(
-    [
-        string_col("Sym", ["AAPL", "GOOG"]),
-        datetime_col(
-            "QuoteTime",
-            [
-                datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-            ],
-        ),
-        double_col("Bid", [149.0, 139.0]),
-    ]
-)
-
-# As-of join (get quote at trade time)
-trades.aj(quotes, on=["Sym", "TradeTime >= QuoteTime"])
-
-# Reverse as-of join (get next quote after trade)
-trades.raj(quotes, on=["Sym", "TradeTime <= QuoteTime"])
-```
-
-## Time-Based Rolling Operations
-
-```python
-from deephaven import empty_table
-from deephaven.updateby import ema_time, rolling_avg_time
-
-t = empty_table(100).update(
-    [
-        "Sym = i % 2 == 0 ? `AAPL` : `GOOG`",
-        "Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1m'",
-        "Price = 150.0 + Math.sin(i * 0.1) * 10",
-    ]
-)
-
-t.update_by(
-    [
-        # 5-minute moving average
-        rolling_avg_time("Timestamp", cols=["MA5m = Price"], rev_time="PT5m"),
-        # 1-hour exponential moving average
-        ema_time("Timestamp", decay_time="PT1h", cols=["EMA1h = Price"]),
-    ],
-    by=["Sym"],
-)
-```
-
-## Python <-> Java Time Conversion
-
-```python
-# Python → Java
-import datetime as dt
-
-from deephaven.time import (
-    to_date,
-    to_datetime,
-    to_j_duration,
-    to_j_instant,
-    to_j_local_date,
-    to_j_local_time,
-    to_time,
-    to_timedelta,
-)
-
-j_instant = to_j_instant(dt.datetime(2024, 1, 15, 10, 30))
-j_date = to_j_local_date(dt.date(2024, 1, 15))
-j_time = to_j_local_time(dt.time(10, 30, 0))
-j_duration = to_j_duration(dt.timedelta(hours=1, minutes=30))
-
-# Java → Python
-py_datetime = to_datetime(j_instant)
-py_date = to_date(j_date)
-py_time = to_time(j_time)
-py_timedelta = to_timedelta(j_duration)
-```
-
-**Performance note:** Call conversion functions outside query strings. Converting inside query strings causes repeated Python-Java boundary crossings.
 
 ## Common Patterns
-
-**Filter to market hours:**
-```python
-from deephaven import empty_table
-
-t = empty_table(100).update(
-    [
-        "Timestamp = parseInstant(`2024-06-15T06:00:00 America/New_York`) + i * 'PT15m'",
-    ]
-)
-
-# Use Timestamp comparison for market hours filtering
-tz = "timeZone(`America/New_York`)"
-t.where(
-    [
-        f"Timestamp >= parseInstant("
-        f"formatDate(Timestamp, {tz})"
-        " + `T09:30:00 America/New_York`)",
-        f"Timestamp < parseInstant("
-        f"formatDate(Timestamp, {tz})"
-        " + `T16:00:00 America/New_York`)",
-    ]
-)
-```
 
 **Time-bucketed OHLCV:**
 ```python
@@ -410,13 +223,13 @@ from deephaven import agg, empty_table
 t = empty_table(100).update(
     [
         "Sym = i % 2 == 0 ? `AAPL` : `GOOG`",
-        "Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT10s'",
+        "Ts = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT10s'",
         "Price = 150.0 + Math.sin(i * 0.1) * 10",
         "Qty = (int)(100 + i * 10)",
     ]
 )
 
-t.update(["TimeBucket = lowerBin(Timestamp, 'PT1m')"]).agg_by(
+t.update(["Bucket = lowerBin(Ts, 'PT1m')"]).agg_by(
     [
         agg.first(cols=["Open = Price"]),
         agg.max_(cols=["High = Price"]),
@@ -424,13 +237,23 @@ t.update(["TimeBucket = lowerBin(Timestamp, 'PT1m')"]).agg_by(
         agg.last(cols=["Close = Price"]),
         agg.sum_(cols=["Volume = Qty"]),
     ],
-    by=["Sym", "TimeBucket"],
+    by=["Sym", "Bucket"],
 )
 ```
 
-## Documentation URLs
+**Filter to market hours:**
+```python
+from deephaven import empty_table
 
-- Time cheat sheet: https://deephaven.io/core/docs/reference/cheat-sheets/time-cheat-sheet.md
-- Date-time types: https://deephaven.io/core/docs/reference/query-language/types/date-time.md
-- Duration types: https://deephaven.io/core/docs/reference/query-language/types/durations.md
-- Period types: https://deephaven.io/core/docs/reference/query-language/types/periods.md
+t = empty_table(100).update(
+    ["Ts = parseInstant(`2024-06-15T06:00:00 America/New_York`) + i * 'PT15m'"]
+)
+
+tz = "timeZone(`America/New_York`)"
+t.where(
+    [
+        f"hourOfDay(Ts, {tz}, true) >= 9",
+        f"hourOfDay(Ts, {tz}, true) < 16",
+    ]
+)
+```

@@ -25,7 +25,7 @@ A new eval pipeline for the `deephaven-core-query-writing` skill that replaces P
 
 ## How `dh render` Changes Everything
 
-`dh render --vm script.py` renders a deephaven.ui widget headlessly and provides:
+`dh render script.py` renders a deephaven.ui widget headlessly and provides:
 
 ### What it gives us (replacing Playwright entirely):
 1. **`snapshot`** — Prints accessibility tree (what components rendered, their state)
@@ -64,15 +64,15 @@ A new eval pipeline for the `deephaven-core-query-writing` skill that replaces P
 - With-skill variant reads SKILL.md + references first
 
 #### Phase 2: Verify with `dh exec` (same as v1)
-- `dh exec --vm script.py` — validates script loads without error
+- `dh exec script.py` — validates script loads without error
 - Up to N retries on failure
 
 #### Phase 3: Render Validation with `dh render` (NEW — replaces Phases 3-5)
-- `dh render --vm script.py snapshot` — get accessibility tree, verify components rendered
-- `dh render --vm script.py tables` — list exported tables, verify data pipeline works
-- `dh render --vm script.py table <id>` — fetch actual data, verify correctness
-- `dh render --vm script.py select "Filter" "value" snapshot` — test interactivity
-- `dh render --vm script.py diagnose` — get diagnostic report if issues found
+- `dh render script.py snapshot` — get accessibility tree, verify components rendered
+- `dh render script.py tables` — list exported tables, verify data pipeline works
+- `dh render script.py table <id>` — fetch actual data, verify correctness
+- `dh render script.py select "Filter" "value" snapshot` — test interactivity
+- `dh render script.py diagnose` — get diagnostic report if issues found
 
 #### Phase 4: Structured Scoring (NEW — replaces Phase 6)
 - Score the dashboard on multiple dimensions using dh render output

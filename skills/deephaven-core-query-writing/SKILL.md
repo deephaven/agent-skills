@@ -7,62 +7,42 @@ metadata:
   version: "0.1.0"
 ---
 
-# Deephaven Development
+## References
 
-## Mandatory Reference Reading
+| Topic | Reference File | Read BEFORE writing code that... |
+| --- | --- | --- |
+| Joins | `references/joins.md` | uses natural_join, aj, raj, exact_join, range_join; match syntax, performance tips |
+| Aggregations | `references/aggregations.md` | uses agg_by, sum_by, avg_by, count_by, etc.; 20+ aggregators, common patterns |
+| Update-by | `references/updateby.md` | uses rolling ops, cumulative ops, EMAs, forward fill |
+| Time | `references/time-operations.md` | parses, bins, or manipulates timestamps; literals, calendars, timezone conversion |
+| Kafka | `references/kafka.md` | consumes from or produces to Kafka; table types, key/value specs |
+| Iceberg | `references/iceberg.md` | reads/writes Iceberg tables; catalog types, partitioned writes |
+| UI | `references/ui.md` | creates dashboards, components, hooks, ui.table, styling |
+| Plotting | `references/plotting.md` | creates charts with dx; all plot types, subplots, interactivity |
+| CSV | `references/csv.md` | imports/exports CSV files; column types, renaming, date parsing, messy files |
 
-**BEFORE writing ANY code involving these topics, you MUST read the reference file:**
+**Do NOT guess or rely on memory.** Deephaven APIs have specific patterns that differ from similar libraries.
 
-| Topic        | Reference File                  | Read BEFORE writing code that...                                      |
-| ------------ | ------------------------------- | --------------------------------------------------------------------- |
-| Joins        | `references/joins.md`           | uses natural_join, aj, raj, exact_join, range_join                    |
-| Aggregations | `references/aggregations.md`    | uses agg_by, sum_by, avg_by, count_by, etc.                           |
-| Update-by    | `references/updateby.md`        | uses rolling ops, cumulative ops, EMAs, forward fill                  |
-| Time         | `references/time-operations.md` | parses, bins, or manipulates timestamps                               |
-| Kafka        | `references/kafka.md`           | consumes from or produces to Kafka                                    |
-| Iceberg      | `references/iceberg.md`         | reads/writes Iceberg tables                                           |
-| UI           | `references/ui.md`              | creates dashboards, components, or uses hooks                         |
-| Plotting     | `references/plotting.md`        | creates charts or visualizations with dx                              |
-| CSV          | `references/csv.md`             | imports/exports CSV files, fixes column types, parses dates from CSVs |
-| Sitemap      | `references/sitemap.md`         | needs to look up additional documentation URLs                        |
-
-**Do NOT guess or rely on memory.** Deephaven APIs have specific patterns that differ from similar libraries. Reading the reference ensures correct usage.
-
-**When debugging errors:**
-
-1. Refer to the relevant reference file for the operation that failed
-2. Compare your code against the reference examples
-3. Check for common mistakes noted in the reference
+## Core Principles
 
 **YOU NEVER ADD PRINT STATEMENTS TO PRINT TABLES, DO NOT CONVERT TO PANDAS JUST TO PRINT**
 
-**Fetch online docs when needed:**
-
-- Read the sitemap reference if you need to look up documentation URLs for specific operations or classes.
-
----
-
-## Table Operations
-
-### Core Principles
+**Filter early.** Place partition/grouping column filters first in `where()` to exclude data early.
 
 **Do as much in-engine as possible.** Deephaven's Java engine is highly optimized. Prefer built-in operations over Python UDFs.
 
-**Avoid Python UDFs in query strings.** Each Python call crosses the Python-Java boundary (~30x slower). Use built-in functions from `java.lang.Math`, time functions, and auto-imported query language functions instead.
+**Avoid Python UDFs in query strings.** Each Python call crosses the Python-Java boundary (slower). Use built-in functions from `java.lang.Math`, time functions, and auto-imported query language functions instead.
 
-**Use the right column operation:**
+**Don't use pandas for intermediate steps.** Converting to pandas and back is slow and can cause memory issues. Use Deephaven's native operations. Avoid pandas unless specifically asked for.
 
-- `select`/`update`: Materialize in RAM - use for expensive formulas accessed frequently
-- `view`/`update_view`: On-demand calculation - use for fast formulas or infrequent access
-- `lazy_update`: Cache results - use for repeated values
+**All imports at the top of the file.** Import only the modules you need. Never use `__import__()` or inline imports mid-script.
 
-**Filter early.** Place partition/grouping column filters first in `where()` to exclude data early.
-
-### Table Creation
+### Example Table Creation
 
 ```python
-from deephaven import empty_table, new_table, ring_table, time_table
+from deephaven import agg, empty_table, merge, new_table, read_csv, time_table, ui
 from deephaven.column import double_col, string_col
+from deephaven.plot import express as dx
 
 # Empty table with formulas
 t = empty_table(100).update(["X = i", "Y = X * 2"])
@@ -73,21 +53,12 @@ t = new_table(
 )
 
 # Ticking time table (real-time)
-t = time_table("PT1s")  # ticks every second
+t = time_table("PT1s")  # accepts durations
 
 # Ring table (bounded size, keeps last N rows)
 source = time_table("PT1s")
 t = ring_table(source, capacity=1000)
 ```
-
-### Table Types
-
-| Type        | Memory    | Use Case                           |
-| ----------- | --------- | ---------------------------------- |
-| Static      | Fixed     | Imported files, snapshots          |
-| Append-only | Unbounded | Complete history from streams      |
-| Blink       | Bounded   | Current cycle only (Kafka default) |
-| Ring        | Bounded   | Last N rows only                   |
 
 ### Extracting Scalar Values
 
@@ -112,22 +83,34 @@ from deephaven import empty_table
 
 t = empty_table(100).update(["A = i", "B = i * 2", "OldName = i", "Unwanted = i"])
 
-# select - new table with specified columns (materialized)
+# select — returns ONLY named columns; stores results in RAM
+# Best for: column subset with expensive formulas or frequently accessed results
 t.select(["A", "B", "C = A + B"])
 
-# view - formula table (calculated on access)
+# view — returns ONLY named columns; recalculates on every access (no RAM cost)
+# Best for: column subset with cheap formulas, sparse access, or memory pressure
 t.view(["A", "B", "C = A + B"])
 
-# update - add columns to existing (materialized)
+# update — keeps ALL columns + adds new; stores results in RAM
+# Best for: results that feed downstream ops (joins, aggs, further updates)
 t.update(["C = A + B", "D = sqrt(C)"])
 
-# update_view - add columns (calculated on access)
+# update_view — keeps ALL columns + adds new; recalculates on every access
+# Best for: display-only columns, or when memory is a concern
 t.update_view(["C = A + B"])
 
-# drop_columns - remove columns
+# lazy_update — keeps ALL columns + adds new; memoizes by input value
+# Best for: few distinct inputs relative to row count (e.g. category lookups)
+t.lazy_update(["C = A + B"])
+
+# drop_columns — remove columns
 t.drop_columns(["Unwanted"])
 
-# rename_columns - rename columns
+# select_distinct — unique rows for named columns
+t.select_distinct(["A"])  # unique values of A
+t.select_distinct(["A", "B"])  # unique (A, B) pairs
+
+# rename_columns — rename columns
 t.rename_columns(["NewName = OldName"])
 ```
 
@@ -188,61 +171,31 @@ t.where("Timestamp > parseInstant(`2024-01-01T00:00:00 America/New_York`)")
 | `raj`          | Reverse as-of: find closest >= timestamp    | Time-series |
 | `range_join`   | Match within ranges, aggregate results      | Range       |
 
+Vertical stacking: `from deephaven import merge` / `merge([t1, t2])` — tables must have matching column names and types.
+
 ### Aggregations Overview
 
 **Read `references/aggregations.md` before using aggregations.**
 
-**Dedicated (single operation):**
+| Approach | Use Case | Example |
+| --- | --- | --- |
+| `sum_by`, `avg_by`, `min_by`, `max_by`, `median_by`, `std_by`, `var_by`, `abs_sum_by` | Single stat, all numeric columns | `t.sum_by("Sym")` |
+| `count_by` | Row count per group (first arg is output col name) | `t.count_by("Count", "Sym")` |
+| `first_by` / `last_by` | First/last row per group | `t.last_by("Sym")` |
+| `head_by` / `tail_by` | First/last N rows per group | `t.head_by(5, "Sym")` |
+| `weighted_avg_by` / `weighted_sum_by` | Weighted stats (first arg is weight col) | `t.weighted_avg_by("Weight", "Sym")` |
+| `agg_by` | Multiple aggs in one pass | `t.agg_by([agg.avg(...), agg.sum_(...)], by=["Sym"])` |
+| `group_by` / `ungroup` | Collect into arrays / explode back | `t.group_by("Sym")` |
+| `partition_by` | Split into sub-tables by key | `t.partition_by("Sym")` |
 
-```python
-from deephaven import new_table
-from deephaven.column import double_col, int_col, string_col
-
-t = new_table(
-    [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
-        double_col("Price", [150.0, 152.0, 140.0, 142.0]),
-        int_col("Qty", [100, 200, 150, 250]),
-    ]
-)
-
-t.sum_by("Sym")  # Sum all numeric columns
-t.avg_by("Sym")  # Average
-t.count_by("Count", "Sym")  # Count rows
-t.first_by("Sym")  # First row per group
-t.last_by("Sym")  # Last row per group
-```
-
-**Combined (multiple operations):**
-
-```python
-from deephaven import agg, new_table
-from deephaven.column import double_col, int_col, string_col
-
-t = new_table(
-    [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
-        double_col("Price", [150.0, 152.0, 140.0, 142.0]),
-        int_col("Qty", [100, 200, 150, 250]),
-    ]
-)
-
-t.agg_by(
-    [
-        agg.avg(cols=["AvgPrice = Price"]),
-        agg.sum_(cols=["TotalQty = Qty"]),
-        agg.count_(col="Count"),
-    ],
-    by=["Sym"],
-)
-```
+Dedicated aggs operate on ALL non-key columns. If any are non-numeric (String, Timestamp), they throw `UnsupportedOperationException`. **Fix:** add `.view()` before the agg to keep only key + numeric columns, or use `agg_by` with explicit `cols`.
 
 ### Query String Syntax
 
 **Literals:**
 
 - Boolean: `true`, `false` (lowercase)
-- Int: `42`, Long: `42L`, Double: `3.14` (underscores like `1_000L` are NOT supported)
+- Int: `42`, Long: `42L`, Double: `3.14` (underscores like `1_000L` are NOT supported). **Bare integers in division produce double:** `(year / 10) * 10` → `1987.0`. Fix: `year - year % 10` or `(int)(year / 10) * 10`
 - String: backticks `` `hello` ``
 - DateTime: `parseInstant(\`2024-01-01T12:00:00 America/New_York\`)`(short aliases like`NY` do NOT work)
 - Duration: `'PT1h30m'`, Period: `'P1y2m3d'`
@@ -287,19 +240,3 @@ write(t, "/tmp/output.parquet")
 t_parquet = read("/tmp/output.parquet")
 ```
 
----
-
-## Reference Documentation
-
-| Reference                       | Content                                                               |
-| ------------------------------- | --------------------------------------------------------------------- |
-| `references/joins.md`           | All 6 join types with examples, match syntax, performance tips        |
-| `references/aggregations.md`    | Dedicated and combined aggregations, 20+ aggregators, common patterns |
-| `references/updateby.md`        | Rolling/cumulative ops, EMAs, MACD/Bollinger patterns                 |
-| `references/time-operations.md` | Time literals, parsing, binning, calendars, timezone conversion       |
-| `references/kafka.md`           | Kafka consumption/production, table types, key/value specs            |
-| `references/iceberg.md`         | Catalog types, reading/writing tables, partitioned writes             |
-| `references/ui.md`              | Dashboard structure, hooks, components, ui.table, styling             |
-| `references/plotting.md`        | Deephaven Express (dx), all plot types, subplots, interactivity       |
-| `references/csv.md`             | CSV import/export, column types, renaming, date parsing, messy files  |
-| `references/sitemap.md`         | Full documentation URL lookup                                         |

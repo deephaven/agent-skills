@@ -40,6 +40,8 @@ t_url = read_csv(
 )
 ```
 
+**Warning — column name sanitization:** `read_csv` legalizes column headers automatically. Spaces and dashes become underscores; all other illegal characters (`.`, `/`, `#`, `@`, `%`, `(`, `)`, etc.) are removed; `$` and `_` are kept; a leading digit gets a `column_` prefix; duplicates get a numeric suffix (`_2`). Examples: `Annual Income (k$)` → `Annual_Income_k$`, `fixed acidity` → `fixed_acidity`, `State/UnionTerritory` → `StateUnionTerritory`, `1st Place` → `column_1st_Place`.
+
 ### Alternative Delimiters
 
 ```python
@@ -107,26 +109,6 @@ t = read_csv("/tmp/headerless.csv", header=header, headless=True)
 
 When `header` is used with a file that has a header row, the `header` dict **overrides** the file's header — the column names and types from the dict are used instead.
 
-```python
-import deephaven.dtypes as dht
-from deephaven import read_csv
-
-# Override types on a file that has headers
-header = {
-    "Date": dht.string,
-    "Symbol": dht.string,
-    "Open": dht.double,
-    "High": dht.double,
-    "Low": dht.double,
-    "Close": dht.double,
-    "Volume": dht.int64,
-    "Status": dht.string,
-    "TimestampStr": dht.string,
-}
-
-t = read_csv("data/stocks.csv", header=header)
-```
-
 ### Available Data Types
 
 | Type | Python `dht` constant | Use for |
@@ -171,21 +153,33 @@ t = read_csv(
 )
 ```
 
+**Non-numeric sentinels (e.g. `-`, `N/A`, blanks):** If a column uses placeholder values like `-` or empty strings for missing data, type inference as `double`/`int` will fail at the first non-numeric row. **Fix: import the column as `dht.string`, then clean and cast.**
+
+```python
+from pathlib import Path
+
+import deephaven.dtypes as dht
+from deephaven import read_csv
+
+Path("/tmp/sentinel.csv").write_text("Name,Value\nA,10\nB,-\nC,30\n")
+
+# Import Value as string to avoid parse failure on "-"
+t = read_csv("/tmp/sentinel.csv", header={"Name": dht.string, "Value": dht.string})
+
+# Clean sentinel values, then cast
+t = t.update(
+    [
+        "Value = Value.equals(`-`) || Value.trim().isEmpty()"
+        + " ? NULL_DOUBLE : Double.parseDouble(Value)"
+    ]
+)
+```
+
+Rare trailing comma / phantom column: A header row ending with `,` creates an unnamed extra column that causes `ArrayIndexOutOfBoundsException`. Neither `allow_missing_columns` nor `ignore_excess_columns` fixes this. **Fix: preprocess the file to strip trailing commas.**
+
 ### Reading Compressed Files
 
 `read_csv` natively supports compressed files. No decompression step needed.
-
-```python
-# incomplete
-from deephaven import read_csv
-
-t = read_csv("/data/large_file.csv.gz")
-t = read_csv("/data/archive.csv.zip")
-```
-
-Supported extensions: `.gz`, `.bz2`, `.zip`, `.7z`, `.zst`, `.tar`, `.tar.gz`, `.tar.bz2`, `.tar.zip`, `.tar.7z`, `.tar.zst`
-
----
 
 ## Exporting CSV Files
 
@@ -216,227 +210,13 @@ write_csv(t, "/tmp/output.csv")
 write_csv(t, "/tmp/partial.csv", cols=["X", "Y"])
 ```
 
-### Null Handling in Export
-
 Null values are written as empty fields in the CSV output.
 
-```python
-from deephaven import empty_table, write_csv
-
-t = empty_table(10).update(
-    [
-        "X = i",
-        "Y = i % 3 == 0 ? NULL_DOUBLE : i * 1.5",
-    ]
-)
-
-write_csv(t, "/tmp/with_nulls.csv")
-```
-
 ---
 
-## Common Post-Import Operations
+## After Import
 
-### Renaming Columns
-
-After import, use `rename_columns` to rename columns or `view`/`select` to alias them.
-
-```python
-from deephaven import read_csv
-
-t = read_csv("data/stocks.csv")
-
-# Rename specific columns (NewName = OldName)
-t_renamed = t.rename_columns(
-    [
-        "Ticker = Symbol",
-        "ClosePrice = Close",
-        "Vol = Volume",
-    ]
-)
-
-# Or use view to rename and select specific columns
-t_view = t.view(
-    [
-        "Ticker = Symbol",
-        "ClosePrice = Close",
-        "Vol = Volume",
-    ]
-)
-```
-
-### Fixing Column Types After Import
-
-When `read_csv` infers the wrong type, cast columns with update formulas. This happens when a column contains mixed data or when you import with all-string types.
-
-```python
-import deephaven.dtypes as dht
-from deephaven import read_csv
-
-# Force all columns to string to demonstrate type fixing
-header = {
-    "Date": dht.string,
-    "Symbol": dht.string,
-    "Open": dht.string,
-    "High": dht.string,
-    "Low": dht.string,
-    "Close": dht.string,
-    "Volume": dht.string,
-    "Status": dht.string,
-    "TimestampStr": dht.string,
-}
-
-t = read_csv("data/stocks.csv", header=header)
-
-# Cast string to double
-t = t.update(["Close = Double.parseDouble(Close)"])
-
-# Cast string to int
-t = t.update(["Volume = Integer.parseInt(Volume)"])
-
-# Multiple type fixes at once
-t2 = read_csv("data/stocks.csv", header=header)
-t2 = t2.update(
-    [
-        "Open = Double.parseDouble(Open)",
-        "High = Double.parseDouble(High)",
-        "Low = Double.parseDouble(Low)",
-        "Close = Double.parseDouble(Close)",
-        "Volume = Integer.parseInt(Volume)",
-    ]
-)
-```
-
-**Better approach — specify types at import time with the `header` parameter** to avoid post-import casting (see "Specifying Column Names and Types on Import" above).
-
-### Parsing Date/Time Columns
-
-CSV files often load date/time columns as strings. Parse them into proper Deephaven time types. Note: `read_csv` may auto-detect ISO-8601 timestamps as `Instant` — use the `header` parameter to force string type if you need manual parsing.
-
-```python
-import deephaven.dtypes as dht
-from deephaven import read_csv
-
-# Force TimestampStr and Date to string so we can demonstrate parsing
-header = {
-    "Date": dht.string,
-    "Symbol": dht.string,
-    "Open": dht.double,
-    "High": dht.double,
-    "Low": dht.double,
-    "Close": dht.double,
-    "Volume": dht.int64,
-    "Status": dht.string,
-    "TimestampStr": dht.string,
-}
-
-t = read_csv("data/stocks.csv", header=header)
-
-# ISO-8601 timestamp string -> Instant
-# TimestampStr contains values like "2024-06-01T10:30:00Z"
-t = t.update(["Timestamp = parseInstant(TimestampStr)"])
-
-# Date string -> Instant by appending time and timezone
-# Date contains values like "2024-06-01"
-t = t.update(
-    [
-        "DateAsInstant = parseInstant(Date + `T00:00:00 America/New_York`)",
-    ]
-)
-```
-
-For more on time parsing, see `references/time-operations.md`.
-
-### Handling Null Values
-
-CSV files may have empty fields that import as null, or you may need to replace values with null.
-
-```python
-from deephaven import read_csv
-
-t = read_csv("data/stocks.csv")
-
-# Check for nulls
-t = t.update(["HasClose = !isNull(Close)"])
-
-# Replace nulls with defaults
-t = t.update(["SafeClose = isNull(Close) ? 0.0 : Close"])
-
-# Create nulls conditionally (e.g., mark low-volume as null)
-t = t.update(["AdjClose = Volume < 600000 ? NULL_DOUBLE : Close"])
-```
-
-### Filtering Rows After Import
-
-```python
-from deephaven import read_csv
-
-t = read_csv("data/stocks.csv")
-
-# Drop rows with null in a column
-t_no_null = t.where("!isNull(Close)")
-
-# Filter by string value
-t_active = t.where("Status = `active`")
-
-# Combine filters (AND logic)
-t_filtered = t.where(["!isNull(Close)", "Close > 145", "Status = `active`"])
-```
-
-### Formatting Numeric Columns
-
-```python
-from deephaven import read_csv
-
-t = read_csv("data/stocks.csv")
-
-# Round a double column
-t = t.update_view(["RoundedClose = Math.round(Close * 100) / 100.0"])
-
-# Format as string with specific decimal places
-t = t.update_view(["CloseStr = String.format(`%.2f`, Close)"])
-```
-
----
-
-## Complete Example: Import, Clean, and Export
-
-```python
-import deephaven.dtypes as dht
-from deephaven import read_csv, write_csv
-
-# Import with explicit types
-header = {
-    "Date": dht.string,
-    "Symbol": dht.string,
-    "Open": dht.double,
-    "High": dht.double,
-    "Low": dht.double,
-    "Close": dht.double,
-    "Volume": dht.int64,
-    "Status": dht.string,
-    "TimestampStr": dht.string,
-}
-
-raw = read_csv(
-    "data/stocks.csv",
-    header=header,
-    ignore_empty_lines=True,
-    trim=True,
-)
-
-# Clean and transform
-cleaned = (
-    raw.rename_columns(["Sym = Symbol"])
-    .update(["Timestamp = parseInstant(TimestampStr)"])
-    .where(["!isNull(Close)", "Volume > 0"])
-    .drop_columns(["Date", "TimestampStr"])
-    .update_view(["Range = High - Low", "MidPrice = (High + Low) / 2.0"])
-)
-
-# Export result
-write_csv(cleaned, "/tmp/cleaned_prices.csv")
-```
+Use standard table operations to clean imported data. Rename columns with `rename_columns` or `view` aliases. Filter with `.where()`. Handle nulls with `isNull()` and ternary expressions. Cast strings with `Double.parseDouble()` / `Integer.parseInt()` in `.update()` — guard nullable columns: `isNull(Col) ? null : Integer.parseInt(Col)`. Parse date strings with `parseInstant()` — see `references/time-operations.md`. Prefer specifying types via `header` at import time over post-import casting.
 
 ---
 
@@ -448,4 +228,6 @@ write_csv(cleaned, "/tmp/cleaned_prices.csv")
 | Not specifying types, then getting wrong inference | Use the `header` parameter with `dht` types |
 | Parsing dates in Python instead of query strings | Use `parseInstant()`, `parseLong()`, etc. in `.update()` |
 | Using `trim=True` when you need `ignore_surrounding_spaces=True` | `trim` is for quoted values; `ignore_surrounding_spaces` (default True) is for unquoted |
-| Converting to pandas just to export | Use `write_csv` directly |
+| Using original CSV header names after import | `read_csv` sanitizes names (spaces/special chars → `_`). Check `t.meta_table` for actual names |
+| Specifying `dht.double` for columns with `-` or blank sentinels | Import as `dht.string`, clean sentinels, then cast to numeric |
+| CSV header has trailing comma → phantom column | Preprocess file to strip trailing commas before `read_csv` |

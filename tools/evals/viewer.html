@@ -715,6 +715,17 @@
       margin: 1.5rem 0;
     }
 
+    /* ---- Skill Tokens view ---- */
+    .token-bar-container { display: flex; align-items: center; gap: 0.5rem; }
+    .token-bar { height: 20px; background: var(--accent); border-radius: 3px; min-width: 2px; transition: width 0.3s; }
+    .token-summary-card { display: flex; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .token-summary-stat {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1rem 1.5rem; text-align: center;
+    }
+    .token-summary-stat .stat-value { font-size: 1.75rem; font-weight: 600; font-family: Poppins, sans-serif; }
+    .token-summary-stat .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+
     /* ---- Recommendation summary cards ---- */
     .rec-summary-grid {
       display: grid;
@@ -911,6 +922,7 @@
     <div class="view-tabs" id="view-tabs" style="display:none;">
       <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
       <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+      <button class="view-tab" onclick="switchView('skill-tokens')">Skill Tokens</button>
     </div>
 
     <!-- Outputs panel (qualitative review) -->
@@ -924,6 +936,13 @@
     <div class="view-panel" id="panel-benchmark">
       <div class="benchmark-view" id="benchmark-content">
         <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+
+    <!-- Skill Tokens panel -->
+    <div class="view-panel" id="panel-skill-tokens">
+      <div class="benchmark-view" id="skill-tokens-content">
+        <div class="benchmark-empty">No skill token data available.</div>
       </div>
     </div>
   </div>
@@ -2121,9 +2140,59 @@
       container.innerHTML = html;
     }
 
+    // ---- Skill Tokens rendering ----
+    function renderSkillTokens() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data || !data.skill_tokens) return;
+
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const st = data.skill_tokens;
+      const container = document.getElementById("skill-tokens-content");
+      const files = st.files || [];
+      const maxTokens = Math.max(...files.map(f => f.tokens), 1);
+
+      let html = "";
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 1rem;'>Skill Token Counts</h2>";
+
+      html += '<div class="token-summary-card">';
+      html += '<div class="token-summary-stat"><div class="stat-value">' + st.total_tokens.toLocaleString() + '</div><div class="stat-label">Total Tokens</div></div>';
+      html += '<div class="token-summary-stat"><div class="stat-value">' + files.length + '</div><div class="stat-label">Files</div></div>';
+      html += '<div class="token-summary-stat"><div class="stat-value">' + st.total_lines.toLocaleString() + '</div><div class="stat-label">Total Lines</div></div>';
+      html += '<div class="token-summary-stat"><div class="stat-value">' + st.encoding + '</div><div class="stat-label">Encoding</div></div>';
+      html += '</div>';
+
+      html += '<table class="benchmark-table" style="table-layout: auto;">';
+      html += '<thead><tr><th>File</th><th style="text-align:right;">Lines</th><th style="text-align:right;">Tokens</th><th style="text-align:right;">%</th><th style="min-width:200px;">Distribution</th></tr></thead>';
+      html += '<tbody>';
+      for (const f of files) {
+        const pct = st.total_tokens > 0 ? (f.tokens / st.total_tokens * 100).toFixed(1) : "0.0";
+        const barWidth = Math.round(f.tokens / maxTokens * 200);
+        const isSkill = f.path === "SKILL.md";
+        const barColor = isSkill ? "var(--accent)" : "var(--green, #4caf50)";
+        html += '<tr>';
+        html += '<td>' + escapeHtml(f.path) + '</td>';
+        html += '<td style="text-align:right;">' + f.lines.toLocaleString() + '</td>';
+        html += '<td style="text-align:right;font-weight:600;">' + f.tokens.toLocaleString() + '</td>';
+        html += '<td style="text-align:right;">' + pct + '%</td>';
+        html += '<td><div class="token-bar-container"><div class="token-bar" style="width:' + barWidth + 'px;background:' + barColor + ';"></div></div></td>';
+        html += '</tr>';
+      }
+      html += '</tbody><tfoot><tr style="font-weight:600;">';
+      html += '<td>Total</td>';
+      html += '<td style="text-align:right;">' + st.total_lines.toLocaleString() + '</td>';
+      html += '<td style="text-align:right;">' + st.total_tokens.toLocaleString() + '</td>';
+      html += '<td style="text-align:right;">100%</td>';
+      html += '<td></td>';
+      html += '</tr></tfoot></table>';
+
+      container.innerHTML = html;
+    }
+
     // ---- Start ----
     buildEvalGroups();
     renderBenchmark();
+    renderSkillTokens();
     init();
   </script>
 </body>

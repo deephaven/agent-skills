@@ -15,7 +15,7 @@ You will complete ALL phases below in this single session. Do not stop early.
 Write a SINGLE Python script that uses Deephaven APIs:
 
 - Load CSV data using the ABSOLUTE path exactly as given in the task
-- Use `deephaven.read_csv()` or `pandas.read_csv()` + `deephaven.pandas.to_table()`
+- Use `deephaven.read_csv()` to load the data into a Deephaven table
 - Perform the data analysis described in the task
 - Create a `deephaven.ui` dashboard: `dashboard = ui.dashboard(layout())`
 - Organize the dashboard with clear labels and logical layout
@@ -24,7 +24,8 @@ Example CSV loading (use the path from the task, not this exact path):
 
 ```python
 from deephaven import read_csv
-data = read_csv("/workspace/tools/evals/data/some-dataset/file.csv")
+# do not use a /workspace/tools/evals/data/... path, use the exact path given in the task
+data = read_csv("/home/sandbox/agent-skills/tools/evals/data/some-dataset/file.csv")
 ```
 
 Write the script to: {OUTPUT_DIR}/script.py
@@ -49,17 +50,4 @@ dh render {OUTPUT_DIR}/script.py --widget dashboard --timeout 30000
 - You may retry up to a total of 8 times
 - After each fix, write the updated script and re-run
 
-Do NOT proceed to Phase 3 until the script runs successfully (exit code 0), or you have exhausted a total of 8 retry attempts.
-
----
-
-## Phase 3: Write Reflection
-
-Write a brief reflection to: {OUTPUT_DIR}/skill-recommendations.md
-
-Content (max 40 lines):
-
-- **Errors encountered:** List every distinct error you hit during script writing and verification. Include the exact error message, which attempt triggered it, and what code caused it.
-- **Fixes applied:** For each error, what you changed and why. Include before/after code snippets where helpful.
-- **Skill gaps:** What documentation or examples would have prevented these errors?
-- **Metrics:** Number of dh exec attempts used
+Stop once the script runs successfully (exit code 0), or you have exhausted a total of 8 retry attempts.
