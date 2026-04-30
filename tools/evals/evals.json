@@ -15,7 +15,8 @@
         "The script uses a join operation (natural_join, join, or exact_join) to combine the two tables",
         "The dashboard includes a line chart showing vaccination trends over time",
         "The dashboard includes a picker or filter for country selection",
-        "The dashboard uses ui.dashboard with a multi-panel layout"
+        "The dashboard uses ui.dashboard with a multi-panel layout",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -32,7 +33,8 @@
         "The script combines or compares the two datasets in some way",
         "The dashboard includes a scatter or correlation chart relating alcohol and grades",
         "The dashboard includes aggregated statistics (e.g. avg grades by alcohol level)",
-        "The dashboard has a picker or filter to select between math and Portuguese courses"
+        "The dashboard has a picker or filter to select between math and Portuguese courses",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -49,7 +51,8 @@
         "The script performs a join operation on state and/or date columns",
         "The dashboard includes a time-series chart of case data",
         "The dashboard includes a computed metric like test positivity rate",
-        "The dashboard has a picker to filter by state"
+        "The dashboard has a picker to filter by state",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -66,7 +69,8 @@
         "The dashboard shows booking counts broken down by hotel type",
         "The dashboard includes a cancellation rate metric or chart",
         "The dashboard includes a bar chart (dx.bar) of ADR (average daily rate) by market segment",
-        "The dashboard has a picker to filter by year"
+        "The dashboard has a picker to filter by year",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -83,7 +87,8 @@
         "The dashboard includes a bar chart (dx.bar) of sales by genre or platform",
         "The dashboard shows a ranking or top-N publishers by sales",
         "The dashboard includes a line chart (dx.line) of annual sales trends",
-        "The dashboard has a picker to filter by genre"
+        "The dashboard has a picker to filter by genre",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -100,7 +105,8 @@
         "The dashboard shows a comparison between churned and existing customers",
         "The dashboard includes a scatter plot with credit limit and utilization",
         "The dashboard has a chart showing distributions by income or card category",
-        "The dashboard has a picker for Card_Category filtering"
+        "The dashboard has a picker for Card_Category filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -116,7 +122,8 @@
         "The script executes without crashing on blank TotalCharges values (either by explicit null-safe parsing or by relying on read_csv type inference)",
         "The dashboard shows churn rates broken down by contract type",
         "The dashboard includes a histogram or chart (dx.histogram or dx.bar) comparing monthly charges by churn status",
-        "The dashboard has a picker for InternetService type filtering"
+        "The dashboard has a picker for InternetService type filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -133,7 +140,8 @@
         "The dashboard shows spending aggregations by product category",
         "The dashboard includes a comparison of purchase channels",
         "The dashboard shows customer segments by education level",
-        "The dashboard has a picker for Marital_Status filtering"
+        "The dashboard has a picker for Marital_Status filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -150,7 +158,8 @@
         "The dashboard includes a scatter plot of Attack vs Defense",
         "The dashboard includes a bar chart of stats by Generation",
         "The dashboard includes a data table showing Pokemon",
-        "The dashboard has a picker for Type 1 filtering that affects the displayed data"
+        "The dashboard has a picker for Type 1 filtering that affects the displayed data",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -167,7 +176,8 @@
         "The dashboard includes a time-series or trend chart across years",
         "The dashboard shows a breakdown or comparison by age group",
         "The dashboard shows a breakdown or comparison by sex",
-        "The dashboard has a picker for country selection"
+        "The dashboard has a picker for country selection",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -184,7 +194,8 @@
         "The dashboard includes a histogram of charges distribution",
         "The dashboard includes a bar chart of average charges by region",
         "The dashboard uses at least three different chart types",
-        "The dashboard has a picker for region filtering"
+        "The dashboard has a picker for region filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -201,7 +212,8 @@
         "The dashboard includes aggregated statistics grouped by quality score",
         "The dashboard includes a histogram or distribution chart",
         "The dashboard has a picker that changes which property is displayed",
-        "The script correctly handles column names with spaces"
+        "The script correctly handles column names with spaces",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -218,7 +230,8 @@
         "The dashboard includes aggregated feature comparisons between M and B diagnosis",
         "The dashboard includes a data table of records",
         "The dashboard has a picker for selecting feature variants",
-        "The script uses ui.dashboard for layout"
+        "The script uses ui.dashboard for layout",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -235,7 +248,8 @@
         "The dashboard compares outcomes between patients who died and survived",
         "The dashboard shows risk factor analysis with charts",
         "The dashboard includes a scatter plot colored by death event",
-        "The dashboard has a picker for sex filtering"
+        "The dashboard has a picker for sex filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -252,7 +266,8 @@
         "The dashboard includes a bar chart of heart disease counts by chest pain type",
         "The script bins ages into groups for aggregation",
         "The dashboard includes a scatter plot of BP vs Cholesterol",
-        "The dashboard has a picker for ChestPainType filtering"
+        "The dashboard has a picker for ChestPainType filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -269,7 +284,8 @@
         "The dashboard shows a comparison of raw vs smoothed values",
         "The dashboard includes aggregated metrics grouped by Outcome",
         "The dashboard includes a histogram or distribution chart",
-        "The dashboard has a picker for Outcome filtering"
+        "The dashboard has a picker for Outcome filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -286,7 +302,8 @@
         "The dashboard shows score comparisons by test preparation course",
         "The dashboard includes score analysis by gender",
         "The dashboard includes parental education level comparisons",
-        "The dashboard has a picker for race/ethnicity filtering"
+        "The dashboard has a picker for race/ethnicity filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -303,7 +320,8 @@
         "The dashboard shows stroke rates by work type or smoking status",
         "The dashboard includes a scatter plot of glucose vs bmi",
         "The dashboard shows risk factor analysis for hypertension and heart disease",
-        "The dashboard has at least one picker for filtering"
+        "The dashboard has at least one picker for filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -320,7 +338,8 @@
         "The dashboard shows hardware specs aggregated by price range",
         "The dashboard includes a scatter plot of ram vs battery_power",
         "The dashboard includes a count or distribution by price range",
-        "The dashboard has a picker for price range filtering"
+        "The dashboard has a picker for price range filtering",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
     {
@@ -338,7 +357,8 @@
         "The script creates age group bins as a computed column",
         "The dashboard has at least two pickers for filtering",
         "The dashboard uses ui.dashboard with a multi-panel layout including ui.row or ui.column",
-        "The dashboard includes a data table component"
+        "The dashboard includes a data table component",
+        "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     }
   ]

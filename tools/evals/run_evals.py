@@ -542,6 +542,7 @@ def validate_single(eval_name: str, config: str, run_dir: Path) -> dict:
                 capture_output=True,
                 text=True,
                 timeout=180,
+                stdin=subprocess.DEVNULL,
             )
             validation["exec_success"] = exec_result.returncode == 0
             validation["exec_exit_code"] = exec_result.returncode
@@ -577,6 +578,7 @@ def validate_single(eval_name: str, config: str, run_dir: Path) -> dict:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                stdin=subprocess.DEVNULL,
             )
             validation["render_success"] = snap_result.returncode == 0
             validation["render_exit_code"] = snap_result.returncode
@@ -838,6 +840,71 @@ async def stage_validate(
 
     tasks = [validate_one(d, c) for d, c in validate_items]
     return await asyncio.gather(*tasks)
+
+
+async def stage_screenshot(
+    run_id: str,
+    eval_names: list[str] | None = None,
+    parallel: int = DEFAULT_PARALLEL,
+):
+    """Capture a settled screenshot for every script that has a successful render."""
+    from evals.screenshot import capture_screenshot
+
+    run_dir = EVALS_RUNS_DIR / run_id
+    if not run_dir.exists():
+        console.print(f"[red]Run directory not found: {run_dir}[/red]")
+        return
+
+    items = []
+    for eval_dir in sorted(run_dir.iterdir()):
+        if not eval_dir.is_dir() or eval_dir.name.endswith(".json"):
+            continue
+        if eval_names and eval_dir.name not in eval_names:
+            continue
+        for config in CONFIGS:
+            outputs = eval_dir / config / "run-1" / "outputs"
+            script = outputs / "script.py"
+            if not script.exists():
+                continue
+            # Skip if validation already proved the script doesn't render.
+            validation_path = outputs / "validation.json"
+            if validation_path.exists():
+                v = json.loads(validation_path.read_text())
+                if not v.get("render_success"):
+                    continue
+            items.append((eval_dir.name, config, script, outputs))
+
+    if not items:
+        console.print("  [dim]No scripts to screenshot[/dim]")
+        return
+
+    # Screenshot is heavy (Playwright + DH server per shot) — cap parallelism.
+    semaphore = asyncio.Semaphore(min(parallel, 2))
+    progress = [0]
+    total = len(items)
+
+    async def shoot_one(eval_name: str, config: str, script: Path, outputs: Path):
+        async with semaphore:
+            progress[0] += 1
+            idx = progress[0]
+            console.print(
+                f"  [dim][{idx}/{total}][/dim] Screenshot {eval_name} [{config}]..."
+            )
+            widget = detect_widget_name(script)
+            out_path = outputs / "screenshot.png"
+            result = await asyncio.to_thread(
+                capture_screenshot, script, out_path, widget
+            )
+            if result.get("success"):
+                console.print(
+                    f"    [green]OK[/green] {eval_name} [{config}] ({result['bytes']} bytes)"
+                )
+            else:
+                console.print(
+                    f"    [red]FAIL[/red] {eval_name} [{config}]: {result.get('error')}"
+                )
+
+    await asyncio.gather(*[shoot_one(*item) for item in items])
 
 
 def print_results_table(results: list[dict]):
@@ -1103,6 +1170,13 @@ async def async_main(args):
         console.print(f"\n[bold]Stage: grade[/bold] (parallel={args.parallel})")
         await stage_grade(run_id, evals, configs, args.evals, args.parallel)
 
+    if args.stage in ("screenshot", "all"):
+        eval_names = [e["name"] for e in evals] if args.evals else None
+        console.print(
+            f"\n[bold]Stage: screenshot[/bold] (parallel={min(args.parallel, 2)})"
+        )
+        await stage_screenshot(run_id, eval_names, args.parallel)
+
     if args.stage in ("aggregate", "all"):
         console.print("\n[bold]Stage: aggregate[/bold]")
         from evals.aggregate import main as aggregate_main
@@ -1163,7 +1237,18 @@ def main():
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument(
         "--stage",
-        choices=["run", "recommend", "validate", "parse", "grade", "aggregate", "summarize", "viewer", "all"],
+        choices=[
+            "run",
+            "recommend",
+            "validate",
+            "parse",
+            "grade",
+            "screenshot",
+            "aggregate",
+            "summarize",
+            "viewer",
+            "all",
+        ],
         default="all",
     )
     parser.add_argument("--model", help="Model override (e.g., sonnet, opus)")

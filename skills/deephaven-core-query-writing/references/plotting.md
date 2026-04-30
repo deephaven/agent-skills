@@ -11,7 +11,7 @@ from deephaven.plot import express as dx
 # import plotly.express as px  # DO NOT USE
 ```
 
-Deephaven Express is a drop-in replacement for Plotly Express that works with real-time Deephaven tables. It must be imported before being used.
+Deephaven Express mirrors the Plotly Express API for tables but is **not a full drop-in** — several Plotly Express kwargs are unsupported and will raise `TypeError: unexpected keyword argument`. Known unsupported: `trendline`, `marginal_x`, `marginal_y`, `facet_col`, `facet_row`, `animation_frame`. For trendlines, compute the regression as a column with `update`/`update_by` and overlay a second `dx.line` via `dx.layer`. For faceting, build one plot per group and arrange them with `dx.make_subplots` (see "Financial Charts, Subplots, and Layers" below). It must be imported before being used.
 
 **Example ticking data**: `dx.data.stocks()`, `dx.data.iris()`, `dx.data.tips()`, `dx.data.gapminder()` and more.
 
@@ -46,7 +46,9 @@ plot = dx.line(table=my_table, x="Timestamp", y="Price", by="Sym")
 
 Docs for each: `https://deephaven.io/core/plotly/docs/<function_name>.md`
 
-**`dx.bar` plots values as-is** — pre-aggregate with `agg_by`/`count_by` before plotting. `dx.histogram` only works on numeric columns; for categorical counts, pre-aggregate then use `dx.bar`. **String x-axis columns render in insertion order**, not sorted — sort the table first or parse date strings to `Instant`/`LocalDate` (see `references/time-operations.md`).
+**`dx.bar` plots values as-is** — pre-aggregate with `agg_by`/`count_by` before plotting. `dx.histogram` only works on numeric columns; for categorical counts, pre-aggregate then use `dx.bar`. **String x-axis columns render in insertion order**, not sorted — sort the table first or parse date strings to `Instant` for a proper temporal axis (see `references/time-operations.md`).
+
+**`dx.*` time axes require `Instant` (or `ZonedDateTime`), not `LocalDate`.** A `LocalDate` x-column renders as a numeric axis and the line silently fails to draw. Parse date strings with `parseInstant` (`parseInstant(date + \`T00:00:00 UTC\`)`); reserve `LocalDate` for date arithmetic and `where` filters, not plot axes.
 
 ```python
 from deephaven import new_table

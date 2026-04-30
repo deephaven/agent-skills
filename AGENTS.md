@@ -83,6 +83,18 @@ uv run run-each-block --sequential     # disable parallelism
 uv run run-each-block --stop-on-fail   # stop at first failure
 ```
 
+### count-tokens
+
+Counts tokens (tiktoken `cl100k_base`) across `SKILL.md` and every `references/*.md`. Use this — not character/word estimates — when measuring the cost of a wording change. With two commit hashes it produces a per-file diff so you can see exactly which file moved.
+
+```bash
+uv run count-tokens                    # working tree
+uv run count-tokens <hash>             # files at a commit
+uv run count-tokens <hash1> <hash2>    # compare two commits, per-file delta
+```
+
+There is also `uv run token-tui` for an interactive terminal UI over the same data.
+
 ## Conventions
 
 - Reference files are plain markdown with no frontmatter
@@ -150,6 +162,7 @@ uv run run-evals --config without_skill
 uv run run-evals --stage validate --run-id 20260305-162133
 uv run run-evals --stage parse --run-id 20260305-162133
 uv run run-evals --stage grade --run-id 20260305-162133
+uv run run-evals --stage screenshot --run-id 20260305-162133    # Playwright PNGs of each dashboard
 uv run run-evals --stage aggregate --run-id 20260305-162133
 uv run run-evals --stage summarize --run-id 20260305-162133
 
@@ -191,5 +204,6 @@ review.html                  # self-contained review page
       exec-result.txt        # dh exec output
       render-result.txt      # dh render snapshot
       validation.json        # structured exec/render results
+      screenshot.png         # settled Playwright capture of the dashboard
       skill-recommendations.md  # per-eval reflection
 ```

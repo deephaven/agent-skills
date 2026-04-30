@@ -523,12 +523,24 @@
     /* ---- View tabs ---- */
     .view-tabs {
       display: flex;
+      align-items: center;
       gap: 0;
       padding: 0 2rem;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
+    .view-tabs-spacer { flex: 1; }
+    .eval-nav-host {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.375rem 0;
+      margin-left: 0.75rem;
+    }
+    .eval-nav-host.hidden { display: none; }
+    .eval-nav-host .eval-nav { height: 2.25rem; }
+    .eval-nav-host .eval-nav select { min-width: 240px; }
     .view-tab {
       font-family: 'Poppins', sans-serif;
       padding: 0.625rem 1.25rem;
@@ -918,11 +930,13 @@
       </div>
     </div>
 
-    <!-- View tabs (only shown when benchmark data exists) -->
-    <div class="view-tabs" id="view-tabs" style="display:none;">
+    <!-- View tabs (Benchmark/Skill Tokens hidden until benchmark data loads) -->
+    <div class="view-tabs" id="view-tabs">
       <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
-      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
-      <button class="view-tab" onclick="switchView('skill-tokens')">Skill Tokens</button>
+      <button class="view-tab" id="tab-benchmark" onclick="switchView('benchmark')" style="display:none;">Benchmark</button>
+      <button class="view-tab" id="tab-skill-tokens" onclick="switchView('skill-tokens')" style="display:none;">Skill Tokens</button>
+      <div class="view-tabs-spacer"></div>
+      <div class="eval-nav-host" id="eval-nav-host"></div>
     </div>
 
     <!-- Outputs panel (qualitative review) -->
@@ -981,7 +995,66 @@
     function init() {
       document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
       buildEvalGroups();
+      buildFixedEvalNav();
       showEval(0);
+    }
+
+    // Build the eval navigation cluster (counter + prev + picker + next) once,
+    // pinned to the right of the tab bar. showEval() updates its state.
+    function buildFixedEvalNav() {
+      const host = document.getElementById("eval-nav-host");
+      if (!host) return;
+      host.innerHTML = "";
+      if (!evalGroups.length) {
+        host.classList.add("hidden");
+        return;
+      }
+
+      const counter = document.createElement("span");
+      counter.className = "eval-nav-counter";
+      counter.id = "eval-counter";
+      host.appendChild(counter);
+
+      const nav = document.createElement("div");
+      nav.className = "eval-nav";
+
+      const prevBtn = document.createElement("button");
+      prevBtn.className = "eval-nav-btn";
+      prevBtn.id = "prev-btn";
+      prevBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+      prevBtn.onclick = function() { navigate(-1); };
+      nav.appendChild(prevBtn);
+
+      const select = document.createElement("select");
+      select.id = "eval-select";
+      select.onchange = function() { onSelectEval(this.value); };
+      for (let i = 0; i < evalGroups.length; i++) {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = (i + 1) + ". " + evalGroups[i].eval_name.replace(/-/g, " ");
+        select.appendChild(opt);
+      }
+      nav.appendChild(select);
+
+      const nextBtn = document.createElement("button");
+      nextBtn.className = "eval-nav-btn";
+      nextBtn.id = "next-btn";
+      nextBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+      nextBtn.onclick = function() { navigate(1); };
+      nav.appendChild(nextBtn);
+
+      host.appendChild(nav);
+    }
+
+    function syncFixedEvalNav(index) {
+      const counter = document.getElementById("eval-counter");
+      if (counter) counter.textContent = (index + 1) + " of " + evalGroups.length;
+      const select = document.getElementById("eval-select");
+      if (select) select.value = String(index);
+      const prevBtn = document.getElementById("prev-btn");
+      if (prevBtn) prevBtn.disabled = index === 0;
+      const nextBtn = document.getElementById("next-btn");
+      if (nextBtn) nextBtn.disabled = index === evalGroups.length - 1;
     }
 
     function onSelectEval(val) {
@@ -1004,7 +1077,7 @@
       container.innerHTML = "";
 
 
-      // Title row: [title] ... [N of N] [< dropdown >]
+      // Inline title (counter + prev/picker/next live in the fixed tab header).
       const titleRow = document.createElement("div");
       titleRow.className = "eval-title-row";
 
@@ -1013,44 +1086,9 @@
       titleDiv.textContent = group.eval_name.replace(/-/g, " ");
       titleRow.appendChild(titleDiv);
 
-      const counter = document.createElement("span");
-      counter.className = "eval-nav-counter";
-      counter.textContent = (index + 1) + " of " + evalGroups.length;
-      titleRow.appendChild(counter);
-
-      const nav = document.createElement("div");
-      nav.className = "eval-nav";
-
-      const prevBtn = document.createElement("button");
-      prevBtn.className = "eval-nav-btn";
-      prevBtn.id = "prev-btn";
-      prevBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
-      prevBtn.onclick = function() { navigate(-1); };
-      prevBtn.disabled = index === 0;
-      nav.appendChild(prevBtn);
-
-      const select = document.createElement("select");
-      select.id = "eval-select";
-      select.onchange = function() { onSelectEval(this.value); };
-      for (let i = 0; i < evalGroups.length; i++) {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = (i + 1) + ". " + evalGroups[i].eval_name.replace(/-/g, " ");
-        if (i === index) opt.selected = true;
-        select.appendChild(opt);
-      }
-      nav.appendChild(select);
-
-      const nextBtn = document.createElement("button");
-      nextBtn.className = "eval-nav-btn";
-      nextBtn.id = "next-btn";
-      nextBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-      nextBtn.onclick = function() { navigate(1); };
-      nextBtn.disabled = index === evalGroups.length - 1;
-      nav.appendChild(nextBtn);
-
-      titleRow.appendChild(nav);
       container.appendChild(titleRow);
+
+      syncFixedEvalNav(index);
 
       // Prompt section
       const promptSection = document.createElement("div");
@@ -1836,6 +1874,10 @@
       document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
       document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
       document.getElementById("panel-" + view).classList.add("active");
+
+      // Eval navigation only makes sense on the Outputs view (per-eval drill-down).
+      const host = document.getElementById("eval-nav-host");
+      if (host) host.classList.toggle("hidden", view !== "outputs");
     }
 
     // ---- Benchmark rendering ----
@@ -1843,7 +1885,8 @@
       const data = EMBEDDED_DATA.benchmark;
       if (!data) return;
 
-      document.getElementById("view-tabs").style.display = "flex";
+      const benchTab = document.getElementById("tab-benchmark");
+      if (benchTab) benchTab.style.display = "";
 
       const container = document.getElementById("benchmark-content");
       const runSummary = data.run_summary || {};
@@ -2145,7 +2188,8 @@
       const data = EMBEDDED_DATA.benchmark;
       if (!data || !data.skill_tokens) return;
 
-      document.getElementById("view-tabs").style.display = "flex";
+      const stTab = document.getElementById("tab-skill-tokens");
+      if (stTab) stTab.style.display = "";
 
       const st = data.skill_tokens;
       const container = document.getElementById("skill-tokens-content");

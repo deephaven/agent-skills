@@ -1,5 +1,7 @@
 # Deephaven CSV Reference
 
+> If the CSV contains timestamp or date columns, also read `references/time-operations.md` for parsing and timezones.
+
 ## Importing CSV Files
 
 ### read_csv Signature

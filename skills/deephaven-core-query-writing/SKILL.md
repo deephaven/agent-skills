@@ -9,7 +9,9 @@ metadata:
 
 ## References
 
-| Topic | Reference File | Read BEFORE writing code that... |
+You must always read reference files before writing code.
+
+| Topic | Reference File | Read before writing code that... |
 | --- | --- | --- |
 | Joins | `references/joins.md` | uses natural_join, aj, raj, exact_join, range_join; match syntax, performance tips |
 | Aggregations | `references/aggregations.md` | uses agg_by, sum_by, avg_by, count_by, etc.; 20+ aggregators, common patterns |
@@ -19,7 +21,7 @@ metadata:
 | Iceberg | `references/iceberg.md` | reads/writes Iceberg tables; catalog types, partitioned writes |
 | UI | `references/ui.md` | creates dashboards, components, hooks, ui.table, styling |
 | Plotting | `references/plotting.md` | creates charts with dx; all plot types, subplots, interactivity |
-| CSV | `references/csv.md` | imports/exports CSV files; column types, renaming, date parsing, messy files |
+| CSV | `references/csv.md` | imports/exports any CSV files; column types, renaming, date parsing, messy files |
 
 **Do NOT guess or rely on memory.** Deephaven APIs have specific patterns that differ from similar libraries.
 
@@ -31,7 +33,7 @@ metadata:
 
 **Do as much in-engine as possible.** Deephaven's Java engine is highly optimized. Prefer built-in operations over Python UDFs.
 
-**Avoid Python UDFs in query strings.** Each Python call crosses the Python-Java boundary (slower). Use built-in functions from `java.lang.Math`, time functions, and auto-imported query language functions instead.
+**Avoid Python UDFs in query strings.** Each Python call crosses the Python-Java boundary (slower). Use built-in functions from `java.lang.Math`, string, time functions, and auto-imported query language functions instead.
 
 **Don't use pandas for intermediate steps.** Converting to pandas and back is slow and can cause memory issues. Use Deephaven's native operations. Avoid pandas unless specifically asked for.
 
@@ -156,6 +158,10 @@ t.where_not_in(filter_table, "Sym")
 
 # Time filtering
 t.where("Timestamp > parseInstant(`2024-01-01T00:00:00 America/New_York`)")
+
+# Dynamic filter — backtick-quote the interpolated string value
+sym = "AAPL"
+t.where(f"Sym = `{sym}`")
 ```
 
 ### Joins Overview

@@ -148,10 +148,12 @@ dash_simple_state = ui.dashboard(layout())
 
 For letting users choose from a set of options. Use `picker` (dropdown) for most cases, `combo_box` for searchable/free-text, `list_view` for always-visible multi-select. All share the same `on_selection_change` callback pattern.
 
-**Static options:** Use `ui.item()` for small fixed lists. For an "All" option, use `None` state with a filter guard:
+**Table-backed options (default):** Pass a Table directly — uses first column as key + label. **Duplicates cause an error**, so always use `select_distinct`. **Keys must be string type** — numeric columns silently produce 0 options; cast first with `.update_view(["Col = `` + Col"])`. For custom column mapping, use `ui.item_table_source(table, key_column="Id", label_column="Name")`. Use `selected_key=None` for a "show all" default — filter with `t if selected is None else t.where(...)`.
+
+**Static options:** Only when the choices are fixed in code — e.g. a hardcoded enum, or when you need to inject extra entries like "All" alongside table values. Use `ui.item()` for each. For an "All" option, use `None` state with a filter guard:
 `selected, set_selected = ui.use_state(None)` → `filtered = t if selected is None else t.where(...)` → `ui.picker(ui.item("All", key="All"), ui.item("A"), ..., selected_key=selected or "All", on_selection_change=lambda v: set_selected(None if v == "All" else v))`.
 
-**Table-backed options:** Pass a Table directly — uses first column as key + label. **Duplicates cause an error**, so always use `select_distinct`. **Keys must be string type** — numeric columns silently produce 0 options; cast first with `.update_view(["Col = `` + Col"])`. For custom column mapping, use `ui.item_table_source(table, key_column="Id", label_column="Name")`. Use `selected_key=None` for a "show all" default — filter with `t if selected is None else t.where(...)`.
+**Do NOT mix `ui.item()` and a Table in the same picker call** — items are silently dropped. To combine table values with extras like "All", use `ui.use_column_data(t, "Col")` to materialize the column as a list, then unpack as `ui.item` entries: `ui.picker(ui.item("All", key="All"), *[ui.item(v) for v in ui.use_column_data(t, "Sym")], ...)`.
 
 ```python
 from deephaven import new_table, ui
