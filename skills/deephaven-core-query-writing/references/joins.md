@@ -1,151 +1,85 @@
 # Deephaven Joins Reference
 
-## Join Types Overview
+## Overview
 
-| Join Method | Match Type | Unmatched Rows | Multiple Matches |
-|-------------|------------|----------------|------------------|
-| `natural_join` | Exact | NULL values | Configurable (error/first/last) |
-| `exact_join` | Exact | Error | Error (must be exactly one) |
-| `join` | Exact | Excluded | All combinations returned |
-| `aj` | As-of (<=) | NULL values | Closest match |
-| `raj` | Reverse as-of (>=) | NULL values | Closest match |
-| `range_join` | Range | NULL values | Aggregated |
+| Method | Match | Unmatched | Multiple Right Matches |
+|---|---|---|---|
+| `natural_join` | Exact | NULL | Errors (or `type=` first/last) |
+| `exact_join` | Exact | Errors | Errors (must be 1) |
+| `join` | Exact | Excluded | All combinations |
+| `aj` | As-of `<=` | NULL | Closest (sorted) |
+| `raj` | Reverse as-of `>=` | NULL | Closest (sorted) |
+| `range_join` | Range | NULL | Aggregated via `agg.group` |
 
-**Common gotchas:**
-- **Type mismatch errors** — join key columns must have the same type on both sides. `string` vs `int` throws `Mismatched join types`. Cast first with `.update(["Key = `` + Key"])` or use `header` to match types at import.
-- **Column name conflicts** — if left and right share non-key column names, joins error with `Conflicting column names`. Fix: use `joins=["NewName = Col"]` to rename, or `.drop_columns()` before joining.
-- **String date keys** — work as exact string matches, but mismatched formats (e.g. `2024-01-01` vs `01/01/2024`) silently produce NULLs instead of erroring.
+**Gotchas:**
+- Key columns must share type both sides; mismatch raises `Mismatched join types` — cast via `.update` first.
+- Non-key column collisions raise `Conflicting column names` — rename via `joins=["NewName = Col"]` or `drop_columns`.
+- String date keys are exact-match only; `2024-01-01` vs `01/01/2024` silently yields NULLs.
+- `aj`/`raj`: right table must be sorted by the as-of column within each exact-match group.
+- `range_join`: static tables only; right table must be sorted by the range column.
 
 ## natural_join
 
-Adds columns from right table. Unmatched rows get NULL. Most common join type.
+Adds right columns; unmatched rows get NULL. Errors on duplicate right keys unless `type=` is set. `on` is str or list; `joins` selects/renames right cols (default: all non-key). Multi-key: `on=["K1", "L = R"]`. Pre-dedupe with `right.last_by("Key")` if needed.
 
 ```python
 from deephaven import new_table
 from deephaven.column import double_col, int_col, string_col
-
-left = new_table(
-    [
-        string_col("KeyCol", ["A", "B", "C"]),
-        double_col("LeftVal", [1.0, 2.0, 3.0]),
-    ]
-)
-
-right = new_table(
-    [
-        string_col("KeyCol", ["A", "B", "D"]),
-        double_col("Col1", [10.0, 20.0, 40.0]),
-        double_col("Col2", [100.0, 200.0, 400.0]),
-    ]
-)
-
-result = left.natural_join(
-    table=right,
-    on="KeyCol",  # or ["Key1", "Key2"] for multiple keys
-    joins="Col1, Col2",  # columns to add (default: all non-key)
-)
-
-# Match different column names
-left2 = new_table(
-    [
-        string_col("LeftKey", ["A", "B"]),
-        double_col("Val", [1.0, 2.0]),
-    ]
-)
-right2 = new_table(
-    [
-        string_col("RightKey", ["A", "B"]),
-        double_col("Info", [10.0, 20.0]),
-    ]
-)
-left2.natural_join(right2, on="LeftKey = RightKey")
-
-# Multiple keys
-left3 = new_table(
-    [
-        string_col("Sym", ["AAPL", "GOOG"]),
-        string_col("Date", ["2024-01-01", "2024-01-01"]),
-        double_col("Price", [150.0, 140.0]),
-    ]
-)
-right3 = new_table(
-    [
-        string_col("Sym", ["AAPL", "GOOG"]),
-        string_col("Date", ["2024-01-01", "2024-01-01"]),
-        int_col("Volume", [1000, 2000]),
-    ]
-)
-left3.natural_join(right3, on=["Sym", "Date"])
-
-# Rename while joining
-left.natural_join(right, on="KeyCol", joins=["NewName = Col1"])
-```
-
-**Handling duplicates in right table** — `natural_join` errors by default if the right table has duplicate keys. Use `type=` to pick first/last, or pre-deduplicate with `right.last_by("KeyCol")` before joining:
-```python
-from deephaven import new_table
-from deephaven.column import double_col, string_col
 from deephaven.table import NaturalJoinType
 
-left = new_table(
-    [
-        string_col("Key", ["A", "B"]),
-        double_col("Val", [1.0, 2.0]),
-    ]
-)
+L = [string_col("Key", ["A", "B"]), double_col("V", [1.0, 2.0])]
+R = [
+    string_col("Key", ["A", "B"]),
+    double_col("C1", [10.0, 20.0]),
+    double_col("C2", [1.0, 2.0]),
+]
+left, right = new_table(L), new_table(R)
 
-right = new_table(
-    [
-        string_col("Key", ["A", "A", "B"]),
-        double_col("Info", [10.0, 11.0, 20.0]),
-    ]
-)
+left.natural_join(table=right, on="Key", joins="C1, C2")
+left.natural_join(right, on="Key", joins=["NewName = C1"])
 
-# Use first match
-left.natural_join(right, on="Key", type=NaturalJoinType.FIRST_MATCH)
+# Different key names + multi-key: on=["LK = RK", "Date"]
+l2 = new_table([string_col("LK", ["A"]), string_col("D", ["x"])])
+r2 = new_table([string_col("RK", ["A"]), string_col("D", ["x"]), int_col("V", [1])])
+l2.natural_join(r2, on=["LK = RK", "D"])
 
-# Use last match
-left.natural_join(right, on="Key", type=NaturalJoinType.LAST_MATCH)
+# Duplicate right keys: pick first/last instead of erroring
+dup = new_table([string_col("Key", ["A", "A"]), double_col("I", [10.0, 11.0])])
+left.natural_join(dup, on="Key", type=NaturalJoinType.FIRST_MATCH)
+left.natural_join(dup, on="Key", type=NaturalJoinType.LAST_MATCH)
 ```
 
 ## exact_join
 
-Like `natural_join` but errors if any left row has zero or multiple matches. Use when you require strict one-to-one matching: `left.exact_join(right, on="Key", joins="Col1, Col2")`.
-
-## join (Cross Join)
-
-Returns all matching combinations. With no keys, produces Cartesian product.
+Like `natural_join` but requires exactly one right match per left row — zero or multiple raises.
 
 ```python
 from deephaven import new_table
 from deephaven.column import double_col, string_col
 
-left = new_table(
-    [
-        string_col("Key", ["A", "A", "B"]),
-        double_col("LVal", [1.0, 2.0, 3.0]),
-    ]
-)
-
-right = new_table(
-    [
-        string_col("Key", ["A", "B", "B"]),
-        double_col("RVal", [10.0, 20.0, 30.0]),
-    ]
-)
-
-# All matching rows from both tables
-result = left.join(right, on="Key")
-
-# Cross join (every combination) - use joins to avoid column name conflicts
-result = left.join(right, on=[], joins=["RVal"])
+left = new_table([string_col("Key", ["A", "B"]), double_col("LVal", [1.0, 2.0])])
+right = new_table([string_col("Key", ["A", "B"]), double_col("Col1", [10.0, 20.0])])
+left.exact_join(right, on="Key", joins="Col1")
 ```
 
-**Warning:** Can produce very large result tables with multiple matches.
+## join (cross / inner)
 
-## aj (As-Of Join)
+Returns every matching combination. `on=[]` gives a Cartesian product. Can explode result size.
 
-Time-series join finding the closest right-table timestamp <= the left timestamp. Use `raj` for the reverse direction (>=).
+```python
+from deephaven import new_table
+from deephaven.column import double_col, string_col
+
+left = new_table([string_col("Key", ["A", "B"]), double_col("L", [1.0, 2.0])])
+right = new_table([string_col("Key", ["A", "B"]), double_col("R", [10.0, 20.0])])
+
+left.join(right, on="Key")  # matching pairs
+left.join(right, on=[], joins=["R"])  # full cross product
+```
+
+## aj / raj (as-of joins)
+
+`aj` picks the latest right row with `right_ts <= left_ts`; `raj` picks the earliest with `right_ts >= left_ts`. Unmatched left rows get NULL. Last entry in `on` is the as-of match; earlier entries are exact keys.
 
 ```python
 import datetime
@@ -153,85 +87,42 @@ import datetime
 from deephaven import new_table
 from deephaven.column import datetime_col, double_col, string_col
 
-trades = new_table(
-    [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
-        datetime_col(
-            "Timestamp",
-            [
-                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 10, 0, 3, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
-            ],
-        ),
-        double_col("TradePrice", [150.0, 152.0, 140.0]),
-    ]
-)
+UTC = datetime.timezone.utc
 
-quotes = new_table(
-    [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
-        datetime_col(
-            "QuoteTime",
-            [
-                datetime.datetime(2024, 6, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 10, 0, 2, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 10, 0, 1, tzinfo=datetime.timezone.utc),
-            ],
-        ),
-        double_col("Bid", [149.0, 151.0, 139.0]),
-        double_col("Ask", [150.5, 152.5, 140.5]),
-    ]
-)
 
-# Get quote at or before trade time (default: <=)
-trades.aj(quotes, on=["Sym", "Timestamp >= QuoteTime"], joins=["Bid", "Ask"])
+def ts(s):
+    return datetime.datetime(2024, 6, 1, 10, 0, s, tzinfo=UTC)
 
-# Exclude exact matches (strict <)
-trades.aj(quotes, on=["Sym", "Timestamp > QuoteTime"], joins=["Bid", "Ask"])
 
-# raj — same syntax, finds closest right timestamp >= left (looking forward)
-trades.raj(quotes, on=["Sym", "Timestamp <= QuoteTime"], joins=["Bid", "Ask"])
+T = [string_col("Sym", ["AAPL"] * 2), datetime_col("TS", [ts(1), ts(3)])]
+Q = [
+    string_col("Sym", ["AAPL"] * 2),
+    datetime_col("QT", [ts(0), ts(2)]),
+    double_col("Bid", [1.0, 2.0]),
+]
+trades = new_table(T)
+quotes = new_table(Q).sort(["Sym", "QT"])
+
+trades.aj(quotes, on=["Sym", "TS >= QT"], joins=["Bid"])  # <= default
+trades.aj(quotes, on=["Sym", "TS > QT"], joins=["Bid"])  # strict <
+trades.raj(quotes, on=["Sym", "TS <= QT"], joins=["Bid"])  # >=
 ```
 
 ## range_join
 
-Joins rows falling within a range, then aggregates the matches.
+Joins right rows whose key falls in a left-row range, then aggregates. Currently only `agg.group` is supported.
 
 ```python
 from deephaven import agg, new_table
 from deephaven.column import double_col, int_col
 
-left = new_table(
-    [
-        int_col("start_col", [0, 10, 20]),
-        int_col("end_col", [10, 20, 30]),
-    ]
-)
+left = new_table([int_col("s", [0, 10]), int_col("e", [10, 20])])
+right = new_table([int_col("r", [5, 15]), double_col("V", [1.0, 2.0])])
 
-right = new_table(
-    [
-        int_col("range_col", [5, 15, 25]),
-        double_col("Value", [100.0, 200.0, 300.0]),
-    ]
-)
-
-result = left.range_join(
-    table=right,
-    on=["start_col <= range_col <= end_col"],
-    aggs=[agg.group(cols=["MatchedValues = Value"])],
-)
+# Inclusive: "<=...<="; exclusive: "<...<"
+left.range_join(right, on=["s <= r <= e"], aggs=[agg.group(cols=["M = V"])])
 ```
-
-**Range match syntax:**
-- `"left_start <= right_col <= left_end"` - inclusive
-- `"left_start < right_col < left_end"` - exclusive
-
-**Constraints:** Currently only supports `agg.group()` aggregation. Right table must be sorted by range column. Static tables only.
 
 ## Performance Tips
 
-1. **Filter before joining** to reduce data volume
-2. **Use `natural_join`** for one-to-one/many-to-one relationships
-3. **Use `aj`/`raj`** for time-series data instead of range comparisons
-4. **Avoid `join` with multiple matches** unless you need all combinations
+Filter before joining. Prefer `natural_join` for 1:1 / many-to-one lookups. Use `aj`/`raj` over range comparisons for time-series alignment. Avoid `join` when the right side has many matches per key.

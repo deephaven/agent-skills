@@ -1,27 +1,23 @@
 # Deephaven update_by Reference
 
-Rolling, cumulative, and window operations that add columns based on row-by-row calculations.
+Rolling, cumulative, window ops adding columns from row-by-row calc.
 
-## All Operations
+## Operations
 
-All operations require numeric columns. Every `_tick` op has a `_time` counterpart (first arg is `ts_col`, uses `rev_time`/`fwd_time` ISO durations instead of `rev_ticks`/`fwd_ticks`).
+Numeric cols only. Every `_tick` op has a `_time` twin: first arg `ts_col`, uses ISO 8601 `rev_time`/`fwd_time` (`PT1s`, `PT5m`, `PT1h30m`) instead of `rev_ticks`/`fwd_ticks`. `rev_ticks` = rows back incl. current; `fwd_ticks` = rows forward (default 0). `_tick` for row counts, `_time` for irregular data.
 
-- `cum_sum`, `cum_prod`, `cum_min`, `cum_max` — running cumulative values
-- `cum_count_where` — cumulative count matching filter (`col=, filters=`)
-- `forward_fill` — fill NULL/NaN with last valid value
-- `delta` — difference from previous row (`delta_control=` for null behavior)
-- `rolling_{sum,avg,min,max,prod,count,std}_tick/_time` — rolling window aggregations
-- `rolling_wavg_tick/_time` — rolling weighted average (`wcol=` required)
-- `rolling_group_tick/_time` — collect window values into array
-- `rolling_count_where_tick/_time` — count matching filter in window (`col=, filters=`)
-- `rolling_formula_tick/_time` — custom formula (see below)
-- `ema_tick/_time`, `ems_tick/_time`, `emmin_tick/_time`, `emmax_tick/_time`, `emstd_tick/_time` — exponential moving average/sum/min/max/std (`decay_ticks=` / `decay_time=`)
+- `cum_{sum,prod,min,max}`; `cum_count_where(col=, filters=)`
+- `forward_fill` (NULL/NaN -> last valid); `delta(delta_control=)`
+- `rolling_{sum,avg,min,max,prod,count,std}_tick/_time`
+- `rolling_wavg_tick/_time(wcol=)`; `rolling_group_tick/_time` (window as array)
+- `rolling_count_where_tick/_time(col=, filters=)`; `rolling_formula_tick/_time`
+- `ema_tick/_time`, `ems_tick/_time`, `emmin/emmax/emstd_tick/_time` (`decay_ticks=`/`decay_time=`)
 
-## Cumulative, Forward Fill, and Delta
+## Example (cumulative + rolling + EMA, tick + time)
 
 ```python
-from deephaven import new_table
-from deephaven.column import double_col, string_col
+# ruff: noqa: I001
+from deephaven import empty_table
 from deephaven.updateby import (
     cum_count_where,
     cum_max,
@@ -29,47 +25,18 @@ from deephaven.updateby import (
     cum_prod,
     cum_sum,
     delta,
-    forward_fill,
-)
-
-t = new_table(
-    [
-        string_col("Sym", ["AAPL", "AAPL", "AAPL", "GOOG", "GOOG", "GOOG"]),
-        double_col("Price", [150.0, float("nan"), 152.0, 140.0, 142.0, 141.0]),
-        double_col("Value", [10.0, 20.0, 30.0, 40.0, 50.0, 60.0]),
-    ]
-)
-
-t.update_by(
-    [
-        cum_sum(cols=["RunningTotal = Value"]),
-        cum_prod(cols=["RunningProduct = Value"]),
-        cum_min(cols=["RunningMin = Value"]),
-        cum_max(cols=["RunningMax = Value"]),
-        cum_count_where(col="CountAbove25", filters="Value > 25"),
-        forward_fill(cols=["FilledPrice = Price"]),  # fills NaN with last valid
-        delta(cols=["PriceChange = Price"]),  # difference from previous row
-    ],
-    by=["Sym"],
-)
-```
-
-## Rolling and EMA Operations (Tick-Based)
-
-Window based on row count. `rev_ticks` = rows to look back (including current), `fwd_ticks` = rows forward (default 0).
-
-```python
-from deephaven import new_table
-from deephaven.column import double_col, int_col, string_col
-from deephaven.updateby import (
     ema_tick,
+    ema_time,
     emmax_tick,
     emmin_tick,
     ems_tick,
     emstd_tick,
+    forward_fill,
     rolling_avg_tick,
+    rolling_avg_time,
     rolling_count_tick,
     rolling_count_where_tick,
+    rolling_count_where_time,
     rolling_group_tick,
     rolling_max_tick,
     rolling_min_tick,
@@ -77,103 +44,74 @@ from deephaven.updateby import (
     rolling_std_tick,
     rolling_sum_tick,
     rolling_wavg_tick,
-)
-
-t = new_table(
-    [
-        string_col("Sym", ["AAPL"] * 20 + ["GOOG"] * 20),
-        double_col(
-            "Price",
-            [150.0 + i * 0.5 for i in range(20)] + [140.0 + i * 0.3 for i in range(20)],
-        ),
-        double_col(
-            "PrevPrice",
-            [149.0 + i * 0.5 for i in range(20)] + [139.0 + i * 0.3 for i in range(20)],
-        ),
-        int_col("Qty", [100 + i * 10 for i in range(40)]),
-        int_col("Volume", [1000 + i * 50 for i in range(40)]),
-    ]
-)
-
-t.update_by(
-    [
-        rolling_avg_tick(cols=["MA10 = Price"], rev_ticks=10),
-        rolling_sum_tick(cols=["Sum10 = Qty"], rev_ticks=10),
-        rolling_min_tick(cols=["Min10 = Price"], rev_ticks=10),
-        rolling_max_tick(cols=["Max10 = Price"], rev_ticks=10),
-        rolling_std_tick(cols=["StdDev = Price"], rev_ticks=20),
-        rolling_prod_tick(cols=["Prod5 = Price"], rev_ticks=5),
-        rolling_count_tick(cols=["NonNull = Price"], rev_ticks=10),
-        rolling_avg_tick(cols=["MA_Ctr = Price"], rev_ticks=5, fwd_ticks=5),
-        rolling_wavg_tick(wcol="Volume", cols=["VWAP = Price"], rev_ticks=20),
-        rolling_group_tick(cols=["Last5 = Price"], rev_ticks=5),
-        rolling_count_where_tick(
-            col="UpTicks", filters="Price > PrevPrice", rev_ticks=10
-        ),
-        ema_tick(decay_ticks=10, cols=["EMA = Price"]),
-        ems_tick(decay_ticks=10, cols=["EMS = Qty"]),
-        emmin_tick(decay_ticks=10, cols=["EMMin = Price"]),
-        emmax_tick(decay_ticks=10, cols=["EMMax = Price"]),
-        emstd_tick(decay_ticks=10, cols=["EMStd = Price"]),
-    ],
-    by=["Sym"],
-)
-```
-
-## Time-Based Variants
-
-Every `_tick` operation above has a `_time` counterpart. The difference: first arg is `ts_col` (timestamp column), uses `rev_time`/`fwd_time` ISO 8601 durations instead of `rev_ticks`/`fwd_ticks`. Use `_tick` for fixed row counts; use `_time` for real-time duration windows with irregular data.
-
-**Time durations:** `PT1s` (1 sec), `PT5m` (5 min), `PT1h` (1 hour), `PT1h30m` (1.5 hours)
-
-```python
-from deephaven import empty_table
-from deephaven.updateby import (
-    ema_time,
-    rolling_avg_time,
-    rolling_count_where_time,
     rolling_wavg_time,
 )
 
-t = empty_table(100).update(
+t = empty_table(40).update(
     [
-        "Sym = i % 2 == 0 ? `AAPL` : `GOOG`",
+        "Sym = i < 20 ? `AAPL` : `GOOG`",
         "Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1m'",
-        "Price = 150.0 + Math.sin(i * 0.1) * 10",
-        "PrevPrice = 150.0 + Math.sin((i - 1) * 0.1) * 10",
+        "Price = (Sym == `AAPL` ? 150.0 : 140.0) + (i == 5 ? Double.NaN : i * 0.4)",
+        "PrevPrice = (Sym == `AAPL` ? 149.0 : 139.0) + i * 0.4",
+        "Qty = (int)(100 + i * 10)",
         "Volume = (int)(1000 + i * 50)",
     ]
 )
 
 t.update_by(
     [
-        rolling_avg_time("Timestamp", cols=["MA_5min = Price"], rev_time="PT5m"),
+        # Cumulative / fill / delta
+        cum_sum(cols=["Tot = Qty"]),
+        cum_prod(cols=["Prod = Qty"]),
+        cum_min(cols=["Mn = Qty"]),
+        cum_max(cols=["Mx = Qty"]),
+        cum_count_where(col="CntBig", filters="Qty > 200"),
+        forward_fill(cols=["Filled = Price"]),  # NaN -> last valid
+        delta(cols=["Change = Price"]),  # diff from prev row
+        # Rolling tick
+        rolling_avg_tick(cols=["MA10 = Price"], rev_ticks=10),
+        rolling_sum_tick(cols=["Sum10 = Qty"], rev_ticks=10),
+        rolling_min_tick(cols=["Min10 = Price"], rev_ticks=10),
+        rolling_max_tick(cols=["Max10 = Price"], rev_ticks=10),
+        rolling_std_tick(cols=["SD = Price"], rev_ticks=20),
+        rolling_prod_tick(cols=["P5 = Price"], rev_ticks=5),
+        rolling_count_tick(cols=["NN = Price"], rev_ticks=10),
+        rolling_avg_tick(cols=["MA_C = Price"], rev_ticks=5, fwd_ticks=5),  # centered
+        rolling_wavg_tick(wcol="Volume", cols=["VWAP = Price"], rev_ticks=20),
+        rolling_group_tick(cols=["Last5 = Price"], rev_ticks=5),
+        rolling_count_where_tick(col="Up", filters="Price > PrevPrice", rev_ticks=10),
+        # EMA family
+        ema_tick(decay_ticks=10, cols=["EMA = Price"]),
+        ems_tick(decay_ticks=10, cols=["EMS = Qty"]),
+        emmin_tick(decay_ticks=10, cols=["EMMin = Price"]),
+        emmax_tick(decay_ticks=10, cols=["EMMax = Price"]),
+        emstd_tick(decay_ticks=10, cols=["EMStd = Price"]),
+        # Time-based (ts_col first, ISO durations)
+        rolling_avg_time("Timestamp", cols=["MA_5m = Price"], rev_time="PT5m"),
         rolling_avg_time(
-            "Timestamp", cols=["MA_Ctr = Price"], rev_time="PT2m", fwd_time="PT2m"
-        ),
+            "Timestamp", cols=["MA_TC = Price"], rev_time="PT2m", fwd_time="PT2m"
+        ),  # noqa: E501
         rolling_wavg_time(
-            "Timestamp", wcol="Volume", cols=["VWAP = Price"], rev_time="PT10m"
-        ),
+            "Timestamp", wcol="Volume", cols=["TVWAP = Price"], rev_time="PT10m"
+        ),  # noqa: E501
         rolling_count_where_time(
-            "Timestamp", col="UpMoves", filters="Price > PrevPrice", rev_time="PT10m"
-        ),
-        ema_time("Timestamp", decay_time="PT5m", cols=["EMA = Price"]),
+            "Timestamp", col="UpT", filters="Price > PrevPrice", rev_time="PT10m"
+        ),  # noqa: E501
+        ema_time("Timestamp", decay_time="PT5m", cols=["EMAt = Price"]),
     ],
     by=["Sym"],
 )
 ```
 
-## Rolling Formula (Custom Calculations)
+## Rolling Formula (Custom)
 
-Apply custom formulas to rolling windows. `formula_param` names the variable representing the window data inside the formula — the formula cannot reference column names directly, only this alias. Operates on one input column at a time (multi-column formulas are not supported).
-
-Available functions in formula: `max`, `min`, `sum`, `count`, `avg`, `var`, `std`, `first`, `last`, `countDistinct`, plus array indexing (`x[0]`) and `x.size()`.
+`formula_param` is the window-data alias in `formula`; formulas can only reference this alias, not column names. One input col per formula (no multi-col). Funcs: `max`, `min`, `sum`, `count`, `avg`, `var`, `std`, `first`, `last`, `countDistinct`, `x[0]`, `x.size()`.
 
 ```python
 from deephaven import empty_table
 from deephaven.updateby import rolling_formula_tick, rolling_formula_time
 
-t = empty_table(100).update(
+t = empty_table(50).update(
     [
         "Sym = i % 2 == 0 ? `AAPL` : `GOOG`",
         "Timestamp = parseInstant(`2024-01-01T09:30:00 America/New_York`) + i * 'PT1m'",
@@ -183,14 +121,12 @@ t = empty_table(100).update(
 
 t.update_by(
     [
-        # Tick-based: x is the window data for Price
         rolling_formula_tick(
             formula="max(x) - min(x)",
             formula_param="x",
             cols=["Range = Price"],
             rev_ticks=10,
         ),
-        # Time-based: same pattern
         rolling_formula_time(
             "Timestamp",
             formula="max(x) - min(x)",
@@ -203,22 +139,27 @@ t.update_by(
 )
 ```
 
-## Common Patterns
+## Patterns: MACD, Bollinger, NaN handling
 
-**MACD and Bollinger Bands:**
+MACD = fast EMA - slow EMA, then signal. Bollinger = MA +/- 2 stddev. EMA `op_control=` modes: `SKIP` (default), `POISON` (NaN propagates), `RESET` (restart at next valid). `delta(delta_control=)` modes: `NULL_DOMINATES` (default), `VALUE_DOMINATES`, `ZERO_DOMINATES`.
+
 ```python
-from deephaven import new_table
-from deephaven.column import double_col, string_col
-from deephaven.updateby import ema_tick, rolling_avg_tick, rolling_std_tick
+from deephaven import empty_table
+from deephaven.updateby import (
+    BadDataBehavior,
+    OperationControl,
+    ema_tick,
+    rolling_avg_tick,
+    rolling_std_tick,
+)
 
-t = new_table(
+t = empty_table(30).update(
     [
-        string_col("Sym", ["AAPL"] * 30),
-        double_col("Price", [150.0 + i * 0.5 for i in range(30)]),
+        "Sym = `AAPL`",
+        "Price = i == 5 ? Double.NaN : 150.0 + i * 0.5",
     ]
 )
 
-# MACD: fast EMA - slow EMA, then signal line
 macd = (
     t.update_by(
         [
@@ -229,35 +170,17 @@ macd = (
     )
     .update(["MACD = EMA12 - EMA26"])
     .update_by([ema_tick(decay_ticks=9, cols=["Signal = MACD"])], by=["Sym"])
-    .update(["Histogram = MACD - Signal"])
+    .update(["Hist = MACD - Signal"])
 )
 
-# Bollinger Bands: MA +/- 2 standard deviations
 bands = t.update_by(
     [
         rolling_avg_tick(cols=["MA = Price"], rev_ticks=20),
-        rolling_std_tick(cols=["StdDev = Price"], rev_ticks=20),
+        rolling_std_tick(cols=["SD = Price"], rev_ticks=20),
     ],
     by=["Sym"],
-).update(["UpperBand = MA + 2 * StdDev", "LowerBand = MA - 2 * StdDev"])
-```
+).update(["Up = MA + 2 * SD", "Lo = MA - 2 * SD"])
 
-## NaN / Null Handling
-
-EMA operations accept `op_control=` to configure behavior when encountering NaN or null values:
-
-```python
-from deephaven import new_table
-from deephaven.column import double_col
-from deephaven.updateby import BadDataBehavior, OperationControl, ema_tick
-
-t = new_table([double_col("V", [10.0, float("nan"), 30.0, 40.0])])
-
-# SKIP (default for EMA): ignore NaN, continue calculation
-# POISON: NaN propagates to all subsequent values
-# RESET: restart calculation from next valid value
 oc = OperationControl(on_nan=BadDataBehavior.RESET)
-t.update_by([ema_tick(decay_ticks=3, cols=["E = V"], op_control=oc)])
+t.update_by([ema_tick(decay_ticks=3, cols=["E = Price"], op_control=oc)], by=["Sym"])
 ```
-
-`delta` uses `delta_control=` instead: `DeltaControl.NULL_DOMINATES` (default), `VALUE_DOMINATES`, or `ZERO_DOMINATES`.

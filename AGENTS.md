@@ -83,6 +83,32 @@ uv run run-each-block --sequential     # disable parallelism
 uv run run-each-block --stop-on-fail   # stop at first failure
 ```
 
+### check-apis
+
+Validates that every API name and kwarg referenced in `SKILL.md` and `references/*.md` actually exists in the live `deephaven` modules. Catches hallucinated method names, typos, and removed/renamed APIs — including those mentioned only in inline backticks in prose, which `check-python` and `run-each-block` cannot see.
+
+How it works: AST-parses every fenced ```python``` block AND every inline `code` span; collects attribute chains rooted at known names (`ui`, `dx`, `dht`, `agg`, `deephaven`, plus instance variables `t`/`table`/`source`/`filtered` → `Table`); then runs a probe via `dh exec` that imports each module, resolves every chain via `getattr`, and validates each call's kwargs against `inspect.signature`.
+
+Requires `dh` on PATH (same as `run-each-block`).
+
+```bash
+uv run check-apis                      # full skill
+uv run check-apis ui.md                # one reference
+uv run check-apis -v                   # show OK chains too
+```
+
+Failures look like:
+
+```
+references/ui.md:
+  L67  ui.picker(lable, on_selection_change, selected_key)
+          → unknown kwargs ['lable']; valid: ['default_selected_key', 'selected_key', ...]
+  L58  ui.use_stat
+          → no attribute 'use_stat' on ui (did you mean 'use_state'?)
+```
+
+Catches more than `run-each-block` does: inline-prose APIs, `# pseudo`-marked blocks, and unreached branches in fenced blocks. Doesn't catch wrong kwarg *values* (e.g. `direction="leftward"`) — that still needs runtime exec or eval signal.
+
 ### count-tokens
 
 Counts tokens (tiktoken `cl100k_base`) across `SKILL.md` and every `references/*.md`. Use this — not character/word estimates — when measuring the cost of a wording change. With two commit hashes it produces a per-file diff so you can see exactly which file moved.
@@ -110,11 +136,6 @@ There is also `uv run token-tui` for an interactive terminal UI over the same da
 CLI tool for running Python code with Deephaven real-time data capabilities, only applies if **dh** is installed and configured properly. This is used for ad-hoc testing and validation of code snippets, especially those that interact with Deephaven.
 
 **IMPORTANT:** Always use `dh` directly, never `uv run dh`. The CLI is installed as a standalone tool.
-
-### Execution Pattern: Always Use Temp Scripts when doing ad-hoc runs and checks
-
-1. Write code to `./tmp/<name>.py` using the Write tool
-2. Execute with `dh exec ./tmp/<name>.py` this is the only way to execute scripts. 
 
 **Script files will always print out table previews, you never need to print the tables** 
 

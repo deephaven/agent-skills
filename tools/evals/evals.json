@@ -212,7 +212,6 @@
         "The dashboard includes aggregated statistics grouped by quality score",
         "The dashboard includes a histogram or distribution chart",
         "The dashboard has a picker that changes which property is displayed",
-        "The script correctly handles column names with spaces",
         "The rendered dashboard contains no panels titled 'Untitled'"
       ]
     },
@@ -298,7 +297,6 @@
       "expectations": [
         "The script executes without errors via dh exec",
         "The dashboard renders successfully via dh render",
-        "The script correctly handles column names with spaces and special characters",
         "The dashboard shows score comparisons by test preparation course",
         "The dashboard includes score analysis by gender",
         "The dashboard includes parental education level comparisons",

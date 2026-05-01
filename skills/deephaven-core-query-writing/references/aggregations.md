@@ -2,246 +2,181 @@
 
 ## Dedicated Aggregations
 
-Single-operation aggregations optimized for common use cases.
+Single-operation aggregations optimized for common cases.
 
 ```python
-from deephaven import new_table
-from deephaven.column import double_col, int_col, string_col
+from deephaven import empty_table
 
-t = new_table(
+t = empty_table(6).update(
     [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG", "MSFT", "MSFT"]),
-        double_col("Price", [150.0, 152.0, 140.0, 142.0, 200.0, 198.0]),
-        int_col("Qty", [100, 200, 150, 250, 300, 100]),
-        double_col("Weight", [0.5, 0.3, 0.7, 0.2, 0.4, 0.6]),
-        double_col("Value", [1500.0, 3040.0, 2100.0, 3550.0, 6000.0, 1980.0]),
+        "Sym = i < 2 ? `AAPL` : (i < 4 ? `GOOG` : `MSFT`)",
+        "Price = 100.0 + i",
+        "Qty = 100 + i*10",
+        "Weight = 0.1 * (i+1)",
+        "Value = Price * Qty",
     ]
 )
 
-# (by): sum_by, avg_by, min_by, max_by, median_by,
-# std_by, var_by, abs_sum_by, first_by, last_by
-t.view(["Price", "Qty", "Value"]).sum_by()  # no arg — entire table (numeric only)
-t.sum_by("Sym")  # single grouping column (key excluded from agg)
-t.sum_by(["Sym", "Weight"])  # multiple grouping columns
+# (by) family operates on ALL non-key columns:
+# sum_by, avg_by, min_by, max_by, median_by, std_by, var_by,
+# abs_sum_by, first_by, last_by
+t.view(["Price", "Qty", "Value"]).sum_by()  # no arg: entire table (numeric only)
+t.sum_by("Sym")  # single key
+t.sum_by(["Sym", "Weight"])  # multiple keys
 t.avg_by("Sym")
-t.min_by("Sym")
-t.max_by("Sym")
 t.median_by("Sym")
-t.std_by("Sym")
-t.var_by("Sym")
-t.abs_sum_by("Sym")
-t.first_by("Sym")
-t.last_by("Sym")
 
-# (col, by): count_by — first arg is the OUTPUT column name
-t.count_by("Count")  # no grouping — entire table
+# count_by(out_col, by) — first arg is the OUTPUT column name
+t.count_by("Count")
 t.count_by("Count", "Sym")
 t.count_by("Count", ["Sym", "Weight"])
 
-# (n, by) or (wcol, by): first arg is NOT a grouping key
+# (n, by) and (wcol, by) — first arg is NOT a key
 t.head_by(5, "Sym")
 t.tail_by(5, "Sym")
 t.weighted_avg_by("Weight", "Sym")  # wcol first, then by
 t.weighted_sum_by("Weight", "Sym")
 ```
 
-**Warning — `UnsupportedOperationException: Unsupported type class java.lang.String`:**
-Dedicated aggs like `avg_by`, `std_by`, `var_by`, `median_by` operate on ALL non-key columns. If any non-key column is a String (or other non-numeric type), they throw. Also throws `aggAllBy has no columns to aggregate` if all non-key columns have been dropped (must have something to aggregate). **Fix: narrow to key + numeric columns before the agg (`.view()` or `.select()`), use `select_distinct` for unique keys, or use `count_by` when you only need counts.**
+**Warning:** dedicated aggs (`avg_by`, `std_by`, `var_by`, `median_by`, etc.) throw `UnsupportedOperationException: Unsupported type class java.lang.String` on String/Timestamp non-key columns, and `aggAllBy has no columns to aggregate` when all non-key columns are dropped. **Fix:** narrow to key + numeric cols via `.view()`/`.select()`, use `select_distinct` for unique keys, or `count_by` for counts.
 
 ```python
-from deephaven import agg, new_table
-from deephaven.column import double_col, string_col
+from deephaven import agg, empty_table
 
-t = new_table(
+t = empty_table(3).update(
     [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG"]),
-        string_col("Exchange", ["NYSE", "NYSE", "NASDAQ"]),
-        double_col("Price", [150.0, 152.0, 140.0]),
+        "Sym = i < 2 ? `AAPL` : `GOOG`",
+        "Exchange = i < 2 ? `NYSE` : `NASDAQ`",
+        "Price = 150.0 + i",
     ]
 )
-
-# WRONG — Exchange is a String, avg_by will throw
-# t.avg_by("Sym")
-
-# Fix: narrow to key + numeric columns first
-t.view(["Sym", "Price"]).avg_by("Sym")
-
-# Or use agg_by with explicit cols (never touches non-numeric columns)
-t.agg_by([agg.avg(cols=["AvgPrice = Price"])], by=["Sym"])
+# WRONG: t.avg_by("Sym")  -> throws on Exchange (String)
+t.view(["Sym", "Price"]).avg_by("Sym")  # narrow first
+t.agg_by(
+    [agg.avg(cols=["AvgPrice = Price"])], by=["Sym"]
+)  # explicit cols ignore non-numerics
 ```
 
 ## Combined Aggregations (agg_by)
 
-Multiple aggregations in a single pass — more efficient than separate calls with `from deephaven import agg`.
+Multiple aggregations in one pass — more efficient than separate calls. Import `from deephaven import agg`. Trailing underscores on `sum_`, `min_`, `max_`, `count_` avoid Python keyword/builtin clash.
 
 ```python
-import datetime
+from deephaven import agg, empty_table
 
-from deephaven import agg, new_table
-from deephaven.column import datetime_col, double_col, int_col, string_col
-
-t = new_table(
+t = empty_table(4).update(
     [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
-        double_col("Price", [150.0, 152.0, 140.0, 142.0]),
-        int_col("Qty", [100, 200, 150, 250]),
-        double_col("Weight", [0.5, 0.5, 0.3, 0.7]),
-        datetime_col(
-            "Timestamp",
-            [
-                datetime.datetime(2024, 6, 1, 10, 0, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 11, 0, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 10, 0, tzinfo=datetime.timezone.utc),
-                datetime.datetime(2024, 6, 1, 11, 0, tzinfo=datetime.timezone.utc),
-            ],
-        ),
+        "Sym = i < 2 ? `AAPL` : `GOOG`",
+        "Price = 140.0 + i*2",
+        "Qty = 100 + i*50",
+        "Weight = 0.1 * (i+1)",
+        "Timestamp = parseInstant(`2024-06-01T10:00:00 UTC`) + i * 'PT1h'",
     ]
 )
 
 result = t.agg_by(
     [
-        # Statistical
-        agg.avg(cols=["AvgPrice = Price"]),
-        agg.sum_(cols=["TotalQty = Qty"]),  # note underscore
-        agg.min_(cols=["MinPrice = Price"]),
-        agg.max_(cols=["MaxPrice = Price"]),
-        agg.median(cols=["MedPrice = Price"]),
-        agg.std(cols=["StdPrice = Price"]),
-        agg.var(cols=["VarPrice = Price"]),
-        agg.abs_sum(cols=["AbsQty = Qty"]),
-        # Weighted
-        agg.weighted_avg(wcol="Weight", cols=["WAvgPrice = Price"]),
-        agg.weighted_sum(wcol="Weight", cols=["WSumPrice = Price"]),
-        # Counting
-        agg.count_(col="RowCount"),  # note underscore
-        agg.count_distinct(cols=["NumPrices = Price"]),
-        agg.count_where(col="HighCount", filters="Price > 141"),
-        # Value selection
-        agg.first(cols=["FirstTime = Timestamp"]),
-        agg.last(cols=["LastTime = Timestamp"]),
-        agg.group(cols=["AllPrices = Price"]),  # collect into array
-        agg.distinct(cols=["UniquePrices = Price"]),  # distinct values as array
-        # Percentiles
-        agg.pct(percentile=0.5, cols=["P50Price = Price"]),
-        agg.pct(percentile=0.95, cols=["P95Price = Price"]),
+        agg.avg(cols=["A = Price"]),
+        agg.sum_(cols=["S = Qty"]),
+        agg.min_(cols=["Mn = Price"]),
+        agg.max_(cols=["Mx = Price"]),
+        agg.median(cols=["Md = Price"]),
+        agg.std(cols=["Sd = Price"]),
+        agg.var(cols=["V = Price"]),
+        agg.abs_sum(cols=["AS = Qty"]),
+        agg.weighted_avg(wcol="Weight", cols=["WA = Price"]),
+        agg.weighted_sum(wcol="Weight", cols=["WS = Price"]),
+        agg.count_(col="N"),
+        agg.count_distinct(cols=["ND = Price"]),
+        agg.count_where(col="Hi", filters="Price > 141"),
+        agg.first(cols=["F = Timestamp"]),
+        agg.last(cols=["L = Timestamp"]),
+        agg.group(cols=["G = Price"]),  # collect into array
+        agg.distinct(cols=["D = Price"]),  # distinct values as array
+        agg.pct(percentile=0.5, cols=["P50 = Price"]),
+        agg.pct(percentile=0.95, cols=["P95 = Price"]),
     ],
     by=["Sym"],
 )
 ```
 
-Additional aggregators not shown above:
+More aggregators (`sorted_first`/`sorted_last` pick by another col's order; `formula` is a custom expr where `formula_param` names the var, `cols` maps `Result=Source`; `partition` returns a sub-table per group) and kwargs (`preserve_empty=True` keeps rows for groups emptied after updates; `initial_groups` pre-defines group keys):
 
 ```python
-from deephaven import agg, new_table
-from deephaven.column import double_col, int_col, string_col
+from deephaven import agg, empty_table, new_table
+from deephaven.column import string_col
 
-t = new_table(
+t = empty_table(4).update(
     [
-        string_col("Group", ["A", "A", "B", "B"]),
-        int_col("SortCol", [2, 1, 4, 3]),
-        double_col("Val", [100.0, 200.0, 300.0, 400.0]),
+        "Sym = i < 2 ? `AAPL` : `GOOG`",
+        "SortCol = new int[]{2,1,4,3}[i]",
+        "Val = 100.0 * (i+1)",
     ]
 )
-
+all_syms = new_table([string_col("Sym", ["AAPL", "GOOG", "MSFT"])])
 t.agg_by(
-    [
+    aggs=[
         agg.sorted_first(order_by="SortCol", cols=["FirstVal = Val"]),
         agg.sorted_last(order_by="SortCol", cols=["LastVal = Val"]),
-        # formula_param names the variable, cols maps Result = Source
         agg.formula(
             formula="max(each) - min(each)", formula_param="each", cols=["Range = Val"]
         ),
         agg.partition(col="SubTable", include_by_columns=False),
     ],
-    by=["Group"],
-)
-```
-
-**agg_by options** — `preserve_empty` keeps result rows for groups that become empty after updates; `initial_groups` pre-defines all possible group keys:
-
-```python
-from deephaven import agg, new_table
-from deephaven.column import double_col, string_col
-
-t = new_table(
-    [
-        string_col("Sym", ["AAPL", "AAPL"]),
-        double_col("Price", [150.0, 152.0]),
-    ]
-)
-
-all_syms = new_table([string_col("Sym", ["AAPL", "GOOG", "MSFT"])])
-
-t.agg_by(
-    aggs=[agg.sum_(cols=["Total = Price"])],
     by=["Sym"],
     preserve_empty=True,
     initial_groups=all_syms,
 )
 ```
 
-## Grouping, Ungrouping, and Partitioning
+## Grouping, Ungrouping, Partitioning
 
 ```python
-from deephaven import agg, new_table
-from deephaven.column import double_col, int_col, string_col
+from deephaven import agg, empty_table
 from deephaven.execution_context import get_exec_ctx
 
-t = new_table(
-    [
-        string_col("Sym", ["AAPL", "AAPL", "GOOG", "GOOG"]),
-        string_col("Exchange", ["NYSE", "NYSE", "NASDAQ", "NASDAQ"]),
-        double_col("Price", [150.0, 152.0, 140.0, 142.0]),
-        int_col("Qty", [100, 200, 150, 250]),
-    ]
+t = empty_table(4).update(
+    ["Sym = i < 2 ? `AAPL` : `GOOG`", "Price = 140.0 + i*2", "Qty = 100 + i*50"]
 )
 
-# group_by — collapse rows into arrays per key
-grouped = t.group_by("Sym")  # each column becomes an array
-ungrouped = grouped.ungroup(["Price", "Qty"])  # explode specific columns
-ungrouped = grouped.ungroup()  # explode all array columns
+# group_by collapses rows into arrays per key; ungroup explodes back
+grouped = t.group_by("Sym")
+grouped.ungroup(["Price", "Qty"])  # specific cols; ungroup() = all array cols
 
-# partition_by — split into sub-tables per key
-partitioned = t.partition_by("Sym")
-constituents = partitioned.constituent_tables
-single = partitioned.get_constituent(["AAPL"])
-keys = partitioned.keys()
-merged = partitioned.merge()
+# partition_by splits into sub-tables per key
+p = t.partition_by("Sym")
+p.constituent_tables
+p.get_constituent(["AAPL"])
+p.keys()
+p.merge()
 
-# transform — apply a function to every constituent (needs execution context)
+# transform applies fn to each constituent (needs exec context)
 ctx = get_exec_ctx()
 
 
-def add_rank(t):
+def add_rank(sub):
     with ctx:
-        return t.update(["Rank = ii + 1"])
+        return sub.update(["Rank = ii + 1"])
 
 
-transformed = partitioned.transform(add_rank)
-merged = transformed.merge()
+p.transform(add_rank).merge()
 
-# partitioned_agg_by — aggregate and return a PartitionedTable
-result = t.partitioned_agg_by(
-    aggs=[agg.avg(cols=["AvgPrice = Price"])],
-    by=["Sym"],
-)
+# partitioned_agg_by aggregates, returns PartitionedTable
+t.partitioned_agg_by(aggs=[agg.avg(cols=["A = Price"])], by=["Sym"])
 ```
 
 ## Common Patterns
 
 ```python
-from deephaven import agg, new_table
-from deephaven.column import double_col, int_col, string_col
+from deephaven import agg, empty_table
 
-# OHLCV (Candlestick) aggregation
-trades = new_table(
+# OHLCV candlestick
+trades = empty_table(6).update(
     [
-        string_col("Sym", ["AAPL", "AAPL", "AAPL", "GOOG", "GOOG", "GOOG"]),
-        string_col(
-            "TimeBucket", ["10:00", "10:00", "10:00", "10:00", "10:00", "10:00"]
-        ),
-        double_col("Price", [150.0, 152.0, 148.0, 140.0, 142.0, 138.0]),
-        int_col("Qty", [100, 200, 150, 250, 300, 100]),
+        "Sym = i < 3 ? `AAPL` : `GOOG`",
+        "TimeBucket = `10:00`",
+        "Price = 140.0 + i*2",
+        "Qty = 100 + i*50",
     ]
 )
 ohlcv = trades.agg_by(
@@ -256,16 +191,13 @@ ohlcv = trades.agg_by(
 )
 
 # Top N per group
-scores = new_table(
-    [
-        string_col("Category", ["A", "A", "A", "A", "B", "B", "B", "B"]),
-        double_col("Value", [10.0, 40.0, 20.0, 30.0, 50.0, 80.0, 60.0, 70.0]),
-    ]
+scores = empty_table(8).update(
+    ["Category = i < 4 ? `A` : `B`", "Value = (double)((i * 37) % 80 + 10)"]
 )
 top3 = scores.sort_descending("Value").head_by(3, "Category")
 
-# Count with percentage
-items = new_table([string_col("Category", ["A", "A", "A", "B", "B", "C"])])
+# Count with %
+items = empty_table(6).update(["Category = i < 3 ? `A` : (i < 5 ? `B` : `C`)"])
 counts = items.agg_by([agg.count_(col="Count")], by=["Category"])
 total = counts.view(["Total = Count"]).sum_by()
 result = counts.natural_join(total, on=[]).update(["Pct = Count / Total * 100"])
@@ -273,7 +205,7 @@ result = counts.natural_join(total, on=[]).update(["Pct = Count / Total * 100"])
 
 ## Memory Warning
 
-Aggregation keys persist in memory for the worker's lifetime, even after rows are removed from the table. Be cautious with high-cardinality grouping keys on long-running workers.
+Aggregation keys persist in worker memory for its lifetime even after rows are removed; be cautious with high-cardinality keys on long-running workers.
 
 ## Documentation URLs
 
